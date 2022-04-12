@@ -1,0 +1,13 @@
+#video_file_id,activity_id,confidence_score,frame_start,frame_end
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.3,100,200
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.6,350,450
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.8,450,550
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.7,630,690
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.3,700,750
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.5,770,840
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.8,950,1050
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.9,1150,1200
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.45,1250,1350
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.4,1550,1950
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.323,2000,2120
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,0.323,2180,2300

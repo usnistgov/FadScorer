@@ -1,0 +1,9 @@
+#video_file_id,activity_id,frame_start,frame_end
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,100,200
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,400,500
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,,650,820
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,1100,1400
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,1450,1460
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,1600,1700
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Class_A,1800,1900
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,,2100,2200

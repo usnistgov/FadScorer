@@ -1,0 +1,29 @@
+loaders:
+  - type: python
+processors:
+  - type: filter
+    documented_only: true
+    exclude_private: true
+    exclude_special: true
+    skip_empty_modules: true
+  - type: smart
+  - type: crossref
+renderer:
+  type: mkdocs
+  config:
+  pages:
+    - title: Home
+      name: index
+      source: README.md
+    - title: API Documentation
+      children:
+        - title: fad21.scoring
+          contents: [ 'fad21.scoring.*' ]
+        - title: fad21.metrics
+          contents: [ 'fad21.metrics.*' ]
+        - title: fad21.validation
+          contents: [ 'fad21.validation.*' ]
+  mkdocs_config:
+    site_name: FAD21 Scorer Documentation
+    theme: windmill
+    repo_url: https://github.com/usnistgov/FAD-Scorer

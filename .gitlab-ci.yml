@@ -1,0 +1,32 @@
+stages:
+  - test
+  - coverage 
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+tests:
+  stage: test
+  cache: {}
+  script:
+    - cd $CI_PROJECT_DIR
+    - echo $CI_PROJECT_DIR
+    - echo $CI_COMMIT_BRANCH
+    - python --version
+    - python -m pip install -e .
+    - cd $CI_PROJECT_DIR/tests
+    - python -m pytest
+  tags:
+    - mig-runner
+
+test_coverage:
+  stage: coverage 
+  cache: {}
+  script:
+    - cd $CI_PROJECT_DIR/tests
+    - python -m pip install coverage
+    - coverage run -m pytest
+    - coverage report
+  coverage: '/^TOTAL.+?(\d+\%)$/'
+  tags:
+    - mig-runner

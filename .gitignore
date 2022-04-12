@@ -1,0 +1,14 @@
+.eggs/**
+tmp/**
+fad21.egg-info/**
+fad21/__pycache__/**
+__pycache__/**
+attic/**
+notebooks/.ipynb**
+.coverage
+*.csv
+*.dm
+.DS_Store
+tests/.DS_Store
+tests/__pycache__/**
+tests/.swp**

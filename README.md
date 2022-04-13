@@ -2,27 +2,29 @@
 
 ## Overview
 
-This directory contains the official scorer for OpenFAD 2022 `Activity
-Classification` (AC) Task and `Temporal Acticity Detection Task` (TAD).
-For evaluation information see [https://openfad.nist.gov](OpenFAD Website).
+Official scorer release for OpenFAD 2022 _Activity Classification_ (AC) Task and
+_Temporal Acticity Detection Task_ (TAD).  For evaluation information see
+[https://openfad.nist.gov](OpenFAD Website).
 
-## Installation
+## Installing Python and Setuptools
 
 NOTE: Please ensure to _call pip from your local python interpreter_ in order
 to install the scorer package and dependecies in your _local_ python
-environment.
-
-## Installing Python and Setuptools
+environment by using `python -m pip` instead of `pip`.
 
 - python 3.7.9
 - setuptools: `python -m pip install setuptools`
 
 ### Installing FAD Scorer
 
+Running install will also install dependent python packages.
 
 ```bash
-python -m pip install -e .
+python -m pip install .
 ```
+
+After running the install above there should be a `fad-scorer` CLI tool in your
+python environment.
 
 ### (Optional) Installing HDF5 Introspection Tools
 

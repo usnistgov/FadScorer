@@ -3,8 +3,8 @@
 ## Overview
 
 Official scorer release for OpenFAD 2022 _Activity Classification_ (AC) Task and
-_Temporal Acticity Detection Task_ (TAD).  For evaluation information see
-[https://openfad.nist.gov](OpenFAD Website).
+_Temporal Acticity Detection Task_ (TAD).  For official evaluation information,
+evaluation plan as well as documentation please visit the [OpenFAD Website](https://openfad.nist.gov).
 
 ## Installing Python and Setuptools
 

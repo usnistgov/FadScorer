@@ -82,7 +82,7 @@ def remap_cmd(args):
     hyp_df = load_hyp(args.score_file)    
     nhyp_df = hyp_df.replace({'activity_id': mdict})
     fh = open(args.output_file, 'w+')
-    if args.reference:        
+    if args.reference_file:        
         columns = ["video_file_id", "activity_id"]        
     else:
         columns = ["video_file_id", "activity_id", "confidence_score"]        
@@ -142,7 +142,7 @@ def main(args=None):
     Note: Using argparse to enforce input parameters. No checks are performed in
     lower level methods.
     """
-    parser = argparse.ArgumentParser(description='FAD21: Fine-grained Activity Detection Scorer, V.2022-01-21', prog="fad21")
+    parser = argparse.ArgumentParser(description='FADScorer: Fine-grained Activity Detection Scorer', prog="fad-scorer")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level output (default: off)")
     parser.add_argument("-d", "--debug", action="store_true", help="Debug level output (default: off)")
     subparsers = parser.add_subparsers(help='command help')

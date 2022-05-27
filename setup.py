@@ -10,16 +10,18 @@ setup(
     packages=find_packages(include=['fad21', 'fad21.*']),
     install_requires=[
         'PyYAML',
-        'pandas>=1.0.5',
-        'numpy>=1.21.5',
+        'pandas',
+        'numpy',        
         'sklearn',
-        'h5py>=3.6.0',
-        'matplotlib>=2.2.0',
-        'tables'
+        'h5py',        
+        'matplotlib',        
+        'tables',
+        'dill'
     ],
     # use python -m pip install -e .[interactive]
     extras_require={'interactive': ['jupyter'],
-                    'documentation': ['pydoc-markdown[novella]', 'mkdocs', 'mkdocs-windmill']},
+                    'documentation': ['pydoc-markdown[novella]', 'mkdocs', 'mkdocs-windmill'],
+                    'tests': ['pytest']},
     setup_requires=['pytest-runner', 'flake8'],
     tests_require=['pytest'],
     entry_points={

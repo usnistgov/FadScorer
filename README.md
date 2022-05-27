@@ -13,14 +13,15 @@ NOTE: Please ensure to _call pip from your local python interpreter_ in order
 to install the scorer package and dependecies in your _local_ python
 environment by using `python -m pip` instead of `pip`.
 
-- python 3.7.9
-- setuptools: `python -m pip install setuptools`
+- python 3.6 or later
+- setuptools
 
 ### Installing FAD Scorer
 
 Running install will also install dependent python packages.
 
 ```bash
+python -m pip install setuptools
 python -m pip install .
 ```
 
@@ -37,6 +38,7 @@ for ubunut/debian based platforms use: `sudo apt-get install h5utils`
 ## Running Tests
 
 ```bash
+python -m pip install .[tests]
 python tests.py
 ```
 

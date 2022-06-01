@@ -39,7 +39,7 @@ def detect_missing_video_id(ds):
     hyp_labels = ds.hyp['video_file_id'].unique()
     label_distance = len(set(ref_labels) - set(hyp_labels))
     if label_distance > 0:
-        log.warning("System output missing video-file-id labels.".format(label_distance))
+        log.warning("System output is missing {} video-file-id labels.".format(label_distance))
         missing_vid = ds.ref[np.logical_not(ds.ref.video_file_id.isin(ds.hyp.video_file_id))] 
         log.error("Missing video_file_id list:")
         print(out_of_scope_vid.video_file_id)
@@ -88,7 +88,7 @@ def validate_ac(ds):
     """ Top-Level AC Validation Method 
     :params DataSet ds: Dataset w/ ref and hyp data
     """    
-    validate_gt(ds)    
+    validate_gt(ds)
     detect_out_of_scope_hyp_video_id(ds)
     detect_missing_video_id(ds)
     validate_pred(ds)

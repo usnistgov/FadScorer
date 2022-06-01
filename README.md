@@ -47,6 +47,7 @@ python tests.py
 ```bash
 # Help
 fad-scorer -h
+fad-scorer score-ac -h
 
 # Activity Classification Task (AC Scorer)
 fad-scorer score-ac -r tests/testdata/ac_ref_2x3.csv -y tests/testdata/ac_hyp_2x3_1fp.csv -o tmp

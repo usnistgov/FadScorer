@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='fad21',
-    version='2022.04.13',
-    description='FAD 2021 Scorer Package',
+    version='2022.06.01',
+    description='FAD 2022 Scorer Package',
     author='Lukas Diduch',
     author_email='lukas.diduch@nist.gov',
     url='https://openfad.nist.gov',
@@ -25,7 +25,7 @@ setup(
     setup_requires=['pytest-runner', 'flake8'],
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': ['fad-scorer=fad21.__main__:main']
+        'console_scripts': ['fad-scorer=fad21.__main__:main', 'ifad-scorer=fad21.__imain__:main', ]
     }
     #,package_data={'fad21': ['data/input_test.csv']}
 )

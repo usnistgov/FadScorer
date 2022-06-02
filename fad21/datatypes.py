@@ -47,7 +47,8 @@ class Dataset(object):
         self.ref = gt
         self.hyp = pred
         self.register = register
-        self.activity_ids = self.ref['activity_id'].unique()
+        if 'activity_id' in self.ref:
+            self.activity_ids = self.ref['activity_id'].unique()
         self.video_ids = self.ref['video_file_id'].unique()
 
     def __repr__(self):

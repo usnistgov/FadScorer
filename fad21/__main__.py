@@ -5,7 +5,7 @@ import traceback
 
 from .generation import ACGenerator, TADGenerator
 from .scoring import score_ac, score_tad
-from .validation import validate_ac, validate_tad, validate_gt
+from .validation import validate_ac, validate_tad, validate_gt, validate_ac_via_index
 from .datatypes import Dataset
 from .io import *
 from .plot import plot_tad, plot_ac
@@ -67,7 +67,7 @@ def ac_scorer_cmd(args):
 
 def tad_scorer_cmd(args):
     """
-    AC Scoring:
+    TAD Scoring (output still needs work to differentiate iou's):
     - validate
     - score
     - extract + print
@@ -101,6 +101,9 @@ def tad_scorer_cmd(args):
     print("-------------")
     print(open(os.path.join(args.output_dir, 'system_scores.csv')).read())
        
+def ac_hyp_validator_cmd(args):    
+    ds = Dataset(load_index(args.video_index_file), load_hyp(args.hypothesis_file))    
+    validate_ac_via_index(ds) 
 
 def plot_cmd(args):   
     h5f = h5_open_archive(args.score_file)    
@@ -146,27 +149,32 @@ def main(args=None):
     parser_score_tad.add_argument("-n", "--print_alignment", action="store_true", default=False, help="Additionally extract and output alignment (default: off)")
     parser_score_tad.set_defaults(func = tad_scorer_cmd)
 
+    parser_validate_ac_hyp = subparsers.add_parser('validate-ac-hyp', help='Validate system output against video index.')
+    parser_validate_ac_hyp.add_argument("-r", '--video_index_file', type=str, required=True)
+    parser_validate_ac_hyp.add_argument("-y", '--hypothesis_file', type=str, required=True)
+    parser_validate_ac_hyp.set_defaults(func = ac_hyp_validator_cmd)
+
     parser_plot = subparsers.add_parser('plot-results', help='Extract system and activity results and generate plots.')
     parser_plot.add_argument("-f", '--score_file', type=str, required=True)    
     parser_plot.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
     parser_plot.set_defaults(func = plot_cmd)
 
     args = parser.parse_args()
-
+    FORMAT = '%(message)s'
      # Note that Logging (singleton) is inherited in submodules !
     if args.debug:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format=FORMAT)
     elif args.verbose:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO, format=FORMAT)
     else:
-        logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+        logging.basicConfig(stream=sys.stdout, level=logging.WARNING, format=FORMAT)
 
     #log = logging.getLogger(__name__) 
     # Need to extra handle this as the error-message is cryptic to the user
     try:
         func = args.func
     except AttributeError:
-        parser.error("too few arguments")
+        parser.error("Too few arguments.")
     try:
         # Execute sub-commands    
         args.func(args)

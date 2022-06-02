@@ -6,23 +6,21 @@ import os
 import glob
 import h5py
 import shlex
-
 import pdb
 from .validation import ValidationError
 
 log = logging.getLogger(__name__)
 
-def check_csv_header(file_name):
+def csv_has_no_header(file_name):
+    """ Check for header in first line """
     with open(file_name) as f:
         line1 = f.readline()
-        if line1.startswith('#'):            
-            return [ l.strip() for l in line1[1:].strip().split(',') ]
-    return None        
+        return not line1.startswith('#')
 
-def load_mapping_file(file_name):
-    """ Mapping file is a json file """
-    f = open(file_name)    
-    return json.load(f)
+def sanitize_csv_header(file_name):
+    """ Assumes header exists """
+    with open(file_name) as f:        
+        return [ l.strip() for l in f.readline()[1:].strip().split(',') ]
 
 def _load_csv(file_name, **kwargs):
     """ Pandas Data-Loader, takes read_csv's args (see panda's docs) """
@@ -33,49 +31,52 @@ def _load_csv(file_name, **kwargs):
     df.columns = df.columns.str.strip()
     return df
 
-def _autoload_csv(fn, header, types = None):
-    auto_header = check_csv_header(fn)
-    if auto_header is None:
-        log.debug("File is missing header in first line ! File: '{}'".format(fn))
-        log.warning("Please use the following heders (order does not matter):")
-        log.warning("--------------------------------------------------------")
+def _autoload_csv(fn, header, types = None):    
+    if csv_has_no_header(fn):
+        log.warning("Can not parse header in first line of file '{}' ".format(fn))
+        log.warning("Please use the following header (order of columns does not matter):")
         if 'frame_start' in types:
             log.warning("#video_file_id,activity_id,confidence_score,frame_start,frame_end")
         else:
             log.warning("#video_file_id,activity_id,confidence_score")        
-        raise ValidationError("Missing header in first line of CSV file !")
-        # automatically infer/match the header , EXCLUDE as this can lead to
-        # hard to track down errors due to errorouns data/column assignments.
-        # return _load_csv(fn, names=header, dtype=types)
-    else:                
+        raise ValidationError("Cannot continue, please fix CSV file !")
+    else:
+        auto_header = sanitize_csv_header(fn)
         if set(auto_header) <= set(header):
             return _load_csv(fn, names=auto_header, comment='#', dtype=types)
         else:
             missing_set = set(header) - set(auto_header)
-            raise IOError("Header of '{}' missing fields: {}".format(fn, list(missing_set)))
+            raise IOError("Header of '{}' is missing following fields: {}".format(fn, list(missing_set)))
 
 def load_ref(fn):
-    """ Load Reference data for Activity Classification Task
-    - infers header as ["video_file_id", "activity_id"] if not provided
-    - using header if provided in first line as comment '#col1,col2m .. colN'
-    """
+    """ AC reference loader"""    
     return _autoload_csv(fn, ["video_file_id", "activity_id"], { 'video_file_id' : 'str', 'activity_id': 'str'})
 
 def load_tad_ref(fn):
-    """ Prelim. specific ground-truth loader for Activity DETection Task """
+    """ TAD reference loader"""
     return _autoload_csv(fn, ["video_file_id", "activity_id", "frame_start", "frame_end"], 
     { 'video_file_id' : 'str', 'activity_id': 'str', 'frame_start': 'float', 'frame_end': 'float'} )
 
 def load_hyp(fn):
-    """ Prelim. specific system output loader """
+    """ AC system output loader"""
     return _autoload_csv(fn, ["video_file_id", "activity_id", "confidence_score"], 
     { 'video_file_id' : 'str', 'activity_id': 'str', 'confidence_score': 'float'})
 
 def load_tad_hyp(fn):
-    """ Prelim. specific system output loader """
+    """ TAD system output loader """
     return _autoload_csv(fn, ["video_file_id", "activity_id", "confidence_score", "frame_start", "frame_end" ],
         { 'video_file_id' : 'str', 'activity_id': 'str', 'confidence_score': 'float', 
         'frame_start': 'float', 'frame_end': 'float'} )
+
+def load_index(fn):
+    """ Video Index Loader """
+    return _autoload_csv(fn, ["video_file_id", "frame_rate"],
+        { 'video_file_id' : 'str', 'frame_rate': 'float' } )
+
+def load_mapping_file(file_name):
+    """ Mapping file is a JSON file """
+    f = open(file_name)
+    return json.load(f)
 
 def write_header_output(fh, df, columns):
     """ Write to file handle w/ custom header """

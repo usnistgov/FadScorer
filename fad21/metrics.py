@@ -55,10 +55,16 @@ def score_sk(data):
     """
     return skm.classification_report(data.activity_id_gt, data.activity_id_pred, output_dict=True)
 
-def generate_zero_scores(labels):    
+def generate_zero_scores(labels):
+    #import pdb
+    #pdb.set_trace() 
     y = []
-    for i in labels:
-        y.append([i, 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0], [] ])
+    if len(labels)>0:
+        for i in labels:
+            y.append([i, 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0], [] ])
+    else:
+        log.error("No matching activities found in system output.")
+        y.append(['no_macthing_activity_placeholder', 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0], [] ])
     return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'ap_11', 'ap_101', 'ap_auc', 'precision', 'recall', 'thresholds', 'ground_truth'])
 
 # Rename to compute_pr_curve

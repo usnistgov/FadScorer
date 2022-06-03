@@ -17,12 +17,10 @@ def dedup_gt_labels(ds):
     ds.ref.drop_duplicates(inplace=True)
     log.info("GT activity-id uniqueness: {}".format(len(ds.ref)/refnum))
 
-
 def err_quit(msg):
     """ Print an error and exit """
     log.critical(msg)
     sys.exit(1)
-
 
 def get(list, index, default=None):
     """ similar to dict.get, but for list objects """
@@ -31,18 +29,18 @@ def get(list, index, default=None):
     except IndexError:
         return default
 
-"""
-Dataset State Struct
-    Data Spec:
-        # index_df      = { video_file_id, tbd } // NOT IN USE
-        
-        ground_truth = { video_file_id, start_frame, end_frame,                    activity_id, instance_id }
-        prediction   = { video_file_id, start_frame, end_frame, processing_status, activity_id, confidence_score }        
-        register     = { video_file_id, activity_id_hyp, activtiy_id_ref, ground_truth, confidence_score }
-        activity_ids = List of activity-ids to use (default: unique(GT.activity_id))
-        video_ids    = List of video-ids to use (default: unique(GT.video_file_id))
-"""
 class Dataset(object):
+    """
+    Dataset State Struct
+        Data Spec:
+            # index_df      = { video_file_id, tbd } // NOT IN USE
+            
+            ground_truth = { video_file_id, start_frame, end_frame,                    activity_id, instance_id }
+            prediction   = { video_file_id, start_frame, end_frame, processing_status, activity_id, confidence_score }        
+            register     = { video_file_id, activity_id_hyp, activtiy_id_ref, ground_truth, confidence_score }
+            activity_ids = List of activity-ids to use (default: unique(GT.activity_id))
+            video_ids    = List of video-ids to use (default: unique(GT.video_file_id))
+    """    
     def __init__(self, gt=None, pred=None, register=None):
         self.ref = gt
         self.hyp = pred

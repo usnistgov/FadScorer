@@ -41,15 +41,13 @@ def detect_missing_video_id(ds):
     if label_distance > 0:
         log.warning("System output is missing {} video-file-id labels.".format(label_distance))
         log.warning("-----------------------------------------------------------")
-        missing_vid = ds.ref[np.logical_not(ds.ref.video_file_id.isin(ds.hyp.video_file_id))] 
-        log.error("Missing video_file_id list:")
+        missing_vid = ds.ref[np.logical_not(ds.ref.video_file_id.isin(ds.hyp.video_file_id))]         
         print(missing_vid.video_file_id.to_csv(index=False))
         log.warning("-----------------------------------------------------------")
         raise ValidationError("Missing video-file-id in system output.")
 
 def detect_out_of_scope_hyp_video_id(ds):
     """ Validate System Output for invalid video-id
-
     :raises ValidationError: Out-of-scope video-id detected
     """
     ref_labels = ds.ref['video_file_id'].unique()
@@ -64,8 +62,8 @@ def detect_out_of_scope_hyp_video_id(ds):
 
 def validate_pred(ds):
     """ Validate Prediction Dataframe.
-
     - Shows warning if PRED has more activity_id classes then GT
+
     :params DataSet ds: Dataset w/ ref and hyp data
     :raises ValidationError: Pred data contains labels outside of GT labels on relevant video_id's
     """
@@ -100,7 +98,6 @@ def validate_ac_via_index(ds):
     :params DataSet ds: Dataset w/ VALIDATION file (#video_id,frame_rate) and hyp data    
     """    
     detect_missing_video_id(ds)    
-
 
 def validate_tad(ds):
     """ Top-Level TAD Validation Method

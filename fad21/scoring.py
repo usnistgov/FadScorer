@@ -35,7 +35,7 @@ def score_ac(ds, metrics=['map'], topk=0, output_dir=None, argstr = "{}"):
     if len(data) > 0:
         pr_scores = compute_precision_score(data)           
     else:
-        pr_scores = generate_zero_scores(ds)
+        pr_scores = generate_zero_scores(ds.register)
 
     results = _sumup_ac_system_level_scores(metrics, pr_scores)
     al_results = _sumup_ac_activity_level_scores(metrics, pr_scores)

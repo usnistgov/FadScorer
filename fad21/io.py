@@ -42,7 +42,7 @@ def _autoload_csv(fn, header, types = None):
         raise ValidationError("Cannot continue, please fix CSV file !")
     else:
         auto_header = sanitize_csv_header(fn)
-        if set(auto_header) <= set(header):
+        if set(header) <= set(auto_header):
             return _load_csv(fn, names=auto_header, comment='#', dtype=types)
         else:
             missing_set = set(header) - set(auto_header)

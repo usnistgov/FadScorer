@@ -9,16 +9,16 @@ Website](https://openfad.nist.gov).
 
 ## Installing Python and Setuptools
 
-NOTE: Please ensure to _call pip from your local python interpreter_ in order
-to install the scorer package and dependecies in your _local_ python
-environment by using `python -m pip` instead of `pip`.
+> NOTE: Please ensure to _call pip from your local python interpreter_ in order
+  to install the scorer package and dependecies in your _local_ python
+  environment by using `python -m pip` instead of `pip`.
 
 - python 3.6 or later
 - setuptools
 
 ### Installing FAD Scorer
 
-Running install will also install dependent python packages.
+> NOTE: Running install will also install dependent python packages.
 
 ```bash
 python -m pip install setuptools
@@ -30,10 +30,16 @@ python environment.
 
 ### (Optional) Installing HDF5 Introspection Tools
 
-The scorer uses HDF5 format for storing results. There are several tools to
-introspect hdf5 files. In order to introspect HDF5 files on the Linux command
-line install system level hdf5 tools using your package manager.  For example
-for ubunut/debian based platforms use: `sudo apt-get install h5utils`
+The scorer uses the [HDF5
+standard-format](https://www.hdfgroup.org/solutions/hdf5/) for storing results
+on file but extracts them to CSV by default so no extra tools are needed to
+inspect system- and activity-level scores.
+
+However, there are several CLI- and UI-based tools available if you wish to
+inspect the hdf5 files directly. For example `h5dump, h5ls`:
+
+- Ubunut/Debian platforms: `sudo apt-get install h5utils`
+- OsX: `brew install hdf5`
 
 ## Running Tests
 
@@ -45,18 +51,19 @@ python tests.py
 ## Usage Examples 
 
 ```bash
-# Help
+# General Help
 fad-scorer -h
+
+# Command Help
 fad-scorer score-ac -h
 
-# Activity Classification Task (AC Scorer)
+# Score Activity Classification Task
 fad-scorer score-ac -r tests/testdata/ac_ref_2x3.csv -y tests/testdata/ac_hyp_2x3_1fp.csv -o tmp
 
-# - using verbose flag
+# - using verbose flag for additional info
 fad-scorer -v score-ac -r tests/testdata/ac_ref_2x3.csv -y tests/testdata/ac_hyp_2x3_1fp.csv -o tmp
 
-
-# Score Temporal Activity Detection Task (TAD Scorer)
+# Score Temporal Activity Detection Task
 fad-scorer score-tad -r tests/testdata/tad_ref_smoothcurve.csv -y tests/testdata/tad_hyp_smoothcurve.csv
 ```
 

@@ -73,6 +73,33 @@ def filter_by_activity(ds, activity_id_list):
     """    
     ds.ref.loc[ds.ref.activity_id.isin(activity_id_list)]
 
+def append_missing_video_id(ds):
+    """ 
+    This method is like 'detect_missing_video_id' but instead of
+    throwing an error it does create an entry in the dataset w/ the missing
+    video-id and a dummy activity_id label.
+
+    :params DataSet ds: Dataset w/ ref and hyp data
+    """
+    ds.ref['video_file_id'] = pd.Categorical(ds.ref.video_file_id)
+    ds.hyp['video_file_id'] = pd.Categorical(ds.hyp.video_file_id)
+    ref_labels = ds.ref['video_file_id'].unique()
+    hyp_labels = ds.hyp['video_file_id'].unique()
+    label_distance = len(set(ref_labels) - set(hyp_labels))
+    if label_distance > 0:                
+        missing_vid = ds.ref[np.logical_not(ds.ref.video_file_id.isin(ds.hyp.video_file_id))]
+        output = [ds.hyp]
+        for index, entry in missing_vid.iterrows():
+            log.warning("Appending missing: {}".format(entry.video_file_id))
+            output.append(pd.DataFrame(data={
+                'video_file_id': entry.video_file_id,
+                'activity_id': '__missed_detection__', 
+                'confidence_score': 1.0
+                }, index=[0]))
+    ds.hyp = pd.concat(output)
+    log.debug("Adjusted for missing video-id:")     
+    log.debug(ds)
+
 def prep_tad_data(ds):
     """ 
     - Remove outt of band activity from pred (MD)

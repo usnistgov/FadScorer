@@ -4,7 +4,7 @@ import csv
 from sklearn import metrics as skm
 import json
 import logging
-
+import sys
 from .datatypes import Dataset
 from .io import *
 
@@ -14,10 +14,12 @@ class ValidationError(Exception):
     """Class for error reporting."""
     pass
 
+
+
 def validate_gt(ds):
     """
     Validate Ground Truth Dataframe
-
+    :params DataSet ds: Dataset w/ ref and hyp data
     :raises ValidationError: if GT data has duplicate entries
     """
     d_raw, d_dedup = ds.ref, ds.ref.drop_duplicates()
@@ -30,8 +32,8 @@ def validate_gt(ds):
 
 def detect_missing_video_id(ds):
     """ Validate System Output for missing video-id against REF
-
-    :raises ValidationError: Hyp is missing video-id from REF
+    :params DataSet ds: Dataset w/ ref and hyp data
+    
     """
     ds.ref['video_file_id'] = pd.Categorical(ds.ref.video_file_id)
     ds.hyp['video_file_id'] = pd.Categorical(ds.hyp.video_file_id)
@@ -40,14 +42,13 @@ def detect_missing_video_id(ds):
     label_distance = len(set(ref_labels) - set(hyp_labels))
     if label_distance > 0:
         log.warning("System output is missing {} video-file-id labels.".format(label_distance))
-        log.warning("-----------------------------------------------------------")
-        missing_vid = ds.ref[np.logical_not(ds.ref.video_file_id.isin(ds.hyp.video_file_id))]         
-        print(missing_vid.video_file_id.to_csv(index=False))
-        log.warning("-----------------------------------------------------------")
-        raise ValidationError("Missing video-file-id in system output.")
+        # Past behavior
+        # :raises ValidationError: Hyp is missing video-id from REF
+        # raise ValidationError("Missing video-file-id in system output.")
 
 def detect_out_of_scope_hyp_video_id(ds):
     """ Validate System Output for invalid video-id
+    :params DataSet ds: Dataset w/ ref and hyp data
     :raises ValidationError: Out-of-scope video-id detected
     """
     ref_labels = ds.ref['video_file_id'].unique()
@@ -57,13 +58,12 @@ def detect_out_of_scope_hyp_video_id(ds):
         log.warning("System output contains {} unknown video-file-id labels.".format(label_distance))
         out_of_scope_vid = ds.hyp[np.logical_not(ds.hyp.video_file_id.isin(ds.ref.video_file_id))] 
         log.error("Out of scope video_file_id:")
-        print(out_of_scope_vid.video_file_id)
+        eprint(out_of_scope_vid.video_file_id)
         raise ValidationError("Unknown video-file-id in system output.")
 
 def validate_pred(ds):
     """ Validate Prediction Dataframe.
     - Shows warning if PRED has more activity_id classes then GT
-
     :params DataSet ds: Dataset w/ ref and hyp data
     :raises ValidationError: Pred data contains labels outside of GT labels on relevant video_id's
     """

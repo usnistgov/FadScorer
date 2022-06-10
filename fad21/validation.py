@@ -43,22 +43,23 @@ def detect_missing_video_id(ds):
     if label_distance > 0:
         log.warning("System output is missing {} video-file-id labels.".format(label_distance))
         # Past behavior
-        # :raises ValidationError: Hyp is missing video-id from REF
+        # --:raises ValidationError: Hyp is missing video-id from REF
         # raise ValidationError("Missing video-file-id in system output.")
 
 def detect_out_of_scope_hyp_video_id(ds):
-    """ Validate System Output for invalid video-id
+    """ Validate System Output for video_id not present in reference data.
     :params DataSet ds: Dataset w/ ref and hyp data
     :raises ValidationError: Out-of-scope video-id detected
     """
     ref_labels = ds.ref['video_file_id'].unique()
     hyp_labels = ds.hyp['video_file_id'].unique()
     label_distance = len(set(hyp_labels) - set(ref_labels))
-    if label_distance > 0:
-        log.warning("System output contains {} unknown video-file-id labels.".format(label_distance))
+    if label_distance > 0:        
         out_of_scope_vid = ds.hyp[np.logical_not(ds.hyp.video_file_id.isin(ds.ref.video_file_id))] 
+        oounique = out_of_scope_vid.video_file_id.unique()
+        log.error("{} entries in system output using {} video-file-id".format(label_distance, len(oounique)))
         log.error("Out of scope video_file_id:")
-        eprint(out_of_scope_vid.video_file_id)
+        log.error(oounique)
         raise ValidationError("Unknown video-file-id in system output.")
 
 def validate_pred(ds):

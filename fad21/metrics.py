@@ -92,6 +92,9 @@ def compute_precision_score(data, tad_mode = False):
 
     """
     labels = data['activity_id_gt'].unique()    
+    labels = np.append(labels, '__missed_detection__')
+    #import pdb
+    #pdb.set_trace()
     y = []
     for i in labels:
         if tad_mode == True:

@@ -111,7 +111,7 @@ def plot_cmd(args):
     if h5f.attrs['scorer-mode'] == 'AC':    
         plot_ac(h5f, args.output_dir)
     else:
-        plot_tad(h5f, args.output_dir)
+        plot_tad(h5f, args.output_dir, prefix=args.prefix)
 
 # -----------------------------------------------------------------------------
 def main(args=None):
@@ -157,6 +157,7 @@ def main(args=None):
     parser_plot = subparsers.add_parser('plot-results', help='Extract system and activity results and generate plots.')
     parser_plot.add_argument("-f", '--score_file', type=str, required=True)    
     parser_plot.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
+    parser_plot.add_argument("-p", "--prefix", help='Prefix to append to legend on TAD plot', type=str, default=None)
     parser_plot.set_defaults(func = plot_cmd)
 
     args = parser.parse_args()

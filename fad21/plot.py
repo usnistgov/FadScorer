@@ -27,7 +27,7 @@ def plot_prs(h5f, root_path, title, output_fn):
     ax.set_title(title)        
     plt.savefig(output_fn)
 
-def gen_sub_prs_plot(h5f, root_path, iou, fig, ax):
+def gen_sub_prs_plot(h5f, root_path, iou, fig, ax, prefix=None):
     log.debug(root_path)
     precDS = h5f["{}/prs/precision".format(root_path)]
     recallDS = h5f["{}/prs/recall".format(root_path)]
@@ -35,10 +35,11 @@ def gen_sub_prs_plot(h5f, root_path, iou, fig, ax):
     x = recallDS[()]
     y = precDS[()]
     y_err = stderrDS[()]        
-    ax.plot(x, y, linewidth=1.0, label=iou)
+    label = ('%s (%s)' % (prefix, iou)) if prefix is not None else str(iou)
+    ax.plot(x, y, linewidth=1.0, label=label)
     ax.fill_between(x, y - y_err, y + y_err, alpha=0.05)    
     ax.set(xlim=(0, 1), xticks=np.arange(0, 1, 0.1),
-        ylim=(0, 1), yticks=np.arange(0, 1, 0.1))
+           ylim=(0, 1), yticks=np.arange(0, 1, 0.1))
 
 def plot_prt(h5f, root_path, output_fn):
     plt.style.use('_mpl-gallery')
@@ -51,7 +52,7 @@ def plot_prt(h5f, root_path, output_fn):
     ax.plot(x, y, linewidth=1.0)
     
     ax.set(xlim=(0, 1), xticks=np.arange(0, 1, 0.1),
-        ylim=(0, 1), yticks=np.arange(0, 1, 0.1))    
+           ylim=(0, 1), yticks=np.arange(0, 1, 0.1))    
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
     ax.set_title(root_path)        
@@ -70,7 +71,7 @@ def plot_tad_single(h5f, output_dir):
         plot_prs(h5f, path, title, os.path.join(output_dir, "tad_prs_{}.png".format(iou)))
 
 # Plot all IoU graphs into one w/ legend
-def plot_tad(h5f, output_dir):
+def plot_tad(h5f, output_dir, legend_loc='upper right', prefix=None):
     iouG = h5f['/system/iou']
     fig, ax = plt.subplots(figsize=(8,6), constrained_layout=True)
     plt.style.use('_mpl-gallery')
@@ -79,12 +80,13 @@ def plot_tad(h5f, output_dir):
     ax.set_title("Mean Precision Recall @ IoU")
     for iou in iouG.keys():
         path = "/system/iou/{}".format(iou)    
-        gen_sub_prs_plot(h5f, path, iou, fig, ax)
+        gen_sub_prs_plot(h5f, path, iou, fig, ax, prefix=prefix)
     #ax.set(xlim=(0, 1.0), xticks=np.arange(0, 1, 0.1), 
     #    ylim=(0, 1.0), yticks=np.arange(0, 1, 0.1))
     ax.grid(True)
-    plt.legend(loc='lower right')        
+    plt.legend(loc=legend_loc)        
     plt.savefig(os.path.join(output_dir, "tad_prs.png"))
+    plt.savefig(os.path.join(output_dir, "tad_prs.pdf"))
 
 def compute_timeseries_steps(v):
     cl = np.concatenate(list(zip(v['frame_start'], v['frame_end'])))

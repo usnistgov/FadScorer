@@ -11,6 +11,7 @@ import os
 from .datatypes import Dataset
 from .io import *
 from .filters import *
+from .validation import detect_out_of_scope_hyp_video_id
 from .metrics import *
 from .metrics import _sumup_ac_system_level_scores, _sumup_ac_activity_level_scores, _sumup_tad_activity_level_scores, _sumup_tad_system_level_scores
 
@@ -29,11 +30,14 @@ def score_ac(ds, metrics=['map'], topk=0, output_dir=None, argstr = "{}"):
     - results     metrics for system level
     - al_results  metrics for activity level
     """
-    prep_testdata(ds)
+    detect_out_of_scope_hyp_video_id(ds)
+    append_missing_video_id(ds)
+    prep_ac_data(ds)
     data = Dataset(ds.ref, ds.hyp, select_by_topk(ds,topk)).register
+    
     #cm, labels, pr_stats = score_pr(data)
     if len(data) > 0:
-        pr_scores = compute_precision_score(data)           
+        pr_scores = compute_precision_score(data)
     else:
         pr_scores = generate_zero_scores(ds.register)
 

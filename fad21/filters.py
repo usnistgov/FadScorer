@@ -11,7 +11,7 @@ import pdb
 
 log = logging.getLogger(__name__)
 
-def prep_testdata(ds):
+def prep_ac_data(ds):
     """ Cleanup System Output
     - add binary label to GT
     - deduplicate (should ideally have no duplicates)
@@ -33,6 +33,7 @@ def prep_testdata(ds):
     # Append __missed_detection__ label
     #if '__missed_detection__' in ds.hyp.activity_id:        
     ds.activity_ids = np.append(ds.activity_ids, '__missed_detection__')
+    
     mpred = ds.hyp[ds.hyp.activity_id.isin(ds.activity_ids)]
     log.info("[xform] {} matching activities [gt X pred] | {} total pred activities.".
         format(len(mpred.activity_id.unique()), prednum))

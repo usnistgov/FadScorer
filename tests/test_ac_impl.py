@@ -1,0 +1,183 @@
+import fad21
+from fad21.scoring import score_ac
+from fad21.validation import validate_ac
+from fad21.datatypes import Dataset
+from fad21.io import *
+from pathlib import Path
+import pytest
+import io
+
+# Tests: scoring-implementation correctness by checking for presence of specific use-cases.
+
+def scoring_run(refFile, hypFile, topk, outDir):
+    ds = Dataset(load_ref(refFile), load_hyp(hypFile))    
+    score_ac(ds, ['map'], topk, outDir)
+    h5f = h5_open_archive(os.path.join(outDir, 'scoring_results.h5'))
+    data = h5_extract_system_scores(h5f)          
+    aData = h5_extract_activity_scores(h5f)
+    return [data, aData]
+
+# Use-Case: 3 classes, 1fp @ top confidence
+#
+# video_file_id  activity_id_pred  gt    conf  activity_id_gt
+# 1711_1         person_rubs_eyes  0.0   0.7   person_twirls
+# 1711_2         person_twirls     1.0   0.6   person_twirls
+# 1711_0         person_twirls     1.0   0.4   person_twirls
+# 7132_2         person_rubs_eyes  1.0   0.6   person_rubs_eyes
+# 7132_1         person_rubs_eyes  1.0   0.5   person_rubs_eyes
+# 7132_0         person_rubs_eyes  1.0   0.4   person_rubs_eyes
+# 8665_2         person_jumps      1.0   0.6   person_jumps
+# 8665_1         person_jumps      1.0   0.5   person_jumps
+# 8665_0         person_jumps      1.0   0.4   person_jumps
+# 
+# Results in following Confusion Matrix & P/R
+# 
+# [2, 1, 0],
+# [0, 3, 0],
+# [0, 0, 3]
+# ['person_twirls', 'person_rubs_eyes', 'person_jumps']
+#
+#         activity_id  precision    recall
+#       person_twirls       1.00  0.666667
+#    person_rubs_eyes       0.75  1.000000
+#        person_jumps       1.00  1.000000)
+# 
+def test_3ref_single_1fp(tmpdir):
+    data, aData = scoring_run('testdata/ac_3ref.csv', 'testdata/ac_3hyp1fp.csv', 0, tmpdir)
+    hData = {}
+    for entry in aData:
+        hData[entry[0]] = entry[2]
+    assert(len(hData) == 3)
+    # resulting aP == P/R values here
+    assert(hData['person_twirls'] == pytest.approx(0.667, 0.01))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.75, 0.1))
+    assert(hData['person_jumps'] == pytest.approx(1.0, 0.1))
+
+# video_file_id  activity_id_pred  gt    conf  activity_id_gt
+# 1711_1         person_rubs_eyes  0.0   0.7   person_twirls
+# 1711_2         person_twirls     1.0   0.6   person_twirls
+# 1711_0         person_twirls     1.0   0.4   person_twirls
+# 7132_2         person_rubs_eyes  1.0   0.6   person_rubs_eyes
+# 7132_1         person_rubs_eyes  1.0   0.5   person_rubs_eyes
+# 7132_0         person_rubs_eyes  1.0   0.4   person_rubs_eyes
+# 8665_2         person_twirls     1.0   0.6   person_jumps
+# 8665_1         person_jumps      1.0   0.5   person_jumps
+# 8665_0         person_jumps      1.0   0.4   person_jumps
+# 
+# Results in following Confusion Matrix & P/R
+# 
+# [2, 1, 0],
+# [0, 3, 0],
+# [1, 0, 2],
+# ['person_twirls', 'person_rubs_eyes', 'person_jumps']
+#
+#          activity_id  precision    recall
+#        person_twirls   0.666667  0.666667 <- !
+#     person_rubs_eyes   0.750000  1.000000
+#         person_jumps   1.000000  0.666667
+#
+# [person_twirls] aP = 0.5
+# precision                           recall               thr             gt
+# [0.5, 0.3333333333333333, 0.0, 1.0] [1.0, 0.5, 0.0, 0.0] [0.4, 0.6, 0.7] [0.0, 1.0, 1.0, 0.0]
+
+def test_3ref_single_2fp(tmpdir):
+    data, aData = scoring_run('testdata/ac_3ref.csv', 'testdata/ac_3hyp2fp.csv', 0, tmpdir)
+    hData = {}
+    for entry in aData:
+        hData[entry[0]] = entry[2]
+    assert(len(hData) == 3)
+    # resulting aP == P/R values here
+    assert(hData['person_twirls'] == pytest.approx(0.5, 0.1))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.75, 0.1))
+    assert(hData['person_jumps'] == pytest.approx(0.667, 0.01))
+
+# Use-Case: 3 classes, 1fp @ top confidence + 1 missing video-id
+#
+# video_file_id  activity_id_pred     gt    conf  activity_id_gt
+# 1711_1 	     person_rubs_eyes     0.0   0.7   person_twirls
+# 1711_2 	     person_twirls        1.0   0.6   person_twirls
+# 1711_0 	     person_twirls        1.0   0.4   person_twirls
+# 7132_2 	     person_rubs_eyes     1.0   0.6   person_rubs_eyes
+# 7132_1 	     person_rubs_eyes     1.0   0.5   person_rubs_eyes
+# 7132_0 	     person_rubs_eyes     1.0   0.4   person_rubs_eyes
+# 8665_1 	     __missed_detection__ 0.0   1.0   person_jumps
+# 8665_2 	     person_jumps         1.0   0.6   person_jumps
+# 8665_0 	     person_jumps         1.0   0.4   person_jumps
+#
+# Results in following Confusion Matrix & P/R
+# 
+# [2, 1, 0, 0],
+# [0, 3, 0, 0],
+# [0, 0, 2, 1],
+# [0, 0, 0, 0] 
+# ['person_twirls', 'person_rubs_eyes', 'person_jumps', '__missed_detection__']
+# 
+#          activity_id  precision    recall
+#        person_twirls       1.00  0.666667
+#     person_rubs_eyes       0.75  1.000000
+#         person_jumps       1.00  0.666667
+# __missed_detection__       0.00  0.000000)
+#
+def test_3ref_single_1fp1md(tmpdir):
+    data, aData = scoring_run('testdata/ac_3ref.csv', 'testdata/ac_3hyp1fp1md.csv', 0, tmpdir)
+    hData = {}
+    for entry in aData:
+        hData[entry[0]] = entry[2]
+    assert(len(hData) == 3)
+    # resulting aP == P/R values here
+    assert(hData['person_twirls'] == pytest.approx(0.667, 0.01))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.75, 0.1))
+    assert(hData['person_jumps'] == pytest.approx(0.667, 0.01))
+
+# Use-Case: 3 Classes w/ 3 hyp each w/ 1fp @ top confidence
+#
+# video_file_id  activity_id_pred 	gt    conf  activity_id_gt
+# 1711_2         person_rubs_eyes   0.0   0.9   person_twirls
+# 1711_2         person_twirls      1.0   0.8   person_twirls
+# 1711_2         person_twirls      1.0   0.7   person_twirls
+# 1711_1         person_twirls      1.0   0.6   person_twirls
+# 1711_1         person_twirls      1.0   0.5   person_twirls
+# 1711_1         person_twirls      1.0   0.4   person_twirls
+# 1711_0         person_twirls      1.0   0.3   person_twirls
+# 1711_0         person_twirls      1.0   0.2   person_twirls
+# 1711_0         person_twirls      1.0   0.1   person_twirls
+# 7132_2         person_rubs_eyes   1.0   0.9   person_rubs_eyes
+# 7132_2         person_rubs_eyes   1.0   0.8   person_rubs_eyes
+# 7132_2         person_rubs_eyes   1.0   0.7   person_rubs_eyes
+# 7132_1         person_rubs_eyes   1.0   0.6   person_rubs_eyes
+# 7132_1         person_rubs_eyes   1.0   0.5   person_rubs_eyes
+# 7132_1         person_rubs_eyes   1.0   0.4   person_rubs_eyes
+# 7132_0         person_rubs_eyes   1.0   0.3   person_rubs_eyes
+# 7132_0         person_rubs_eyes   1.0   0.2   person_rubs_eyes
+# 7132_0         person_rubs_eyes   1.0   0.1   person_rubs_eyes
+# 8665_2         person_jumps       1.0   0.9   person_jumps
+# 8665_2         person_jumps       1.0   0.8   person_jumps
+# 8665_2         person_jumps       1.0   0.7   person_jumps
+# 8665_1         person_jumps       1.0   0.6   person_jumps
+# 8665_1         person_jumps       1.0   0.5   person_jumps
+# 8665_1         person_jumps       1.0   0.4   person_jumps
+# 8665_0         person_jumps       1.0   0.3   person_jumps
+# 8665_0         person_jumps       1.0   0.2   person_jumps
+# 8665_0         person_jumps       1.0   0.1   person_jumps
+#
+# Results in following Confusion Matrix & P/R
+#
+# [8, 1, 0],
+# [0, 9, 0],
+# [0, 0, 9]
+# ['person_twirls', 'person_rubs_eyes', 'person_jumps']
+#
+#      activity_id  precision    recall
+#    person_twirls        1.0  0.888889
+# person_rubs_eyes        0.9  1.000000
+#     person_jumps        1.0  1.000000
+def test_3ref_multihyp_1fp_multi(tmpdir):
+    data, aData = scoring_run('testdata/ac_3ref.csv', 'testdata/ac_3hyp1fp_multi.csv', 0, tmpdir)
+    hData = {}
+    for entry in aData:
+        hData[entry[0]] = entry[2]
+    assert(len(hData) == 3)
+    # resulting aP == P/R values here
+    assert(hData['person_twirls'] == pytest.approx(0.889, 0.01))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.9, 0.1))
+    assert(hData['person_jumps'] == pytest.approx(1.0, 0.1))

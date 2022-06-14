@@ -44,11 +44,9 @@ def score_pr(data):
     sgt = cm.sum(axis=1)
     outp, outr = [], []    
     for i in range(0, len(cm)):        
-        outp.append(cm[i,i]/spred[i])        
-        if sgt[i] > 0: 
-            outr.append(cm[i,i]/sgt[i])
-        else: # Account for __missed_detection__'s 0 sum avoiding division/0
-            outr.append(0)
+        # Account for __missed_detection__'s 0 sum avoiding division/0
+        outp.append(cm[i,i]/spred[i]) if spred[i] > 0 else outp.append(0)
+        outr.append(cm[i,i]/sgt[i]) if sgt[i] > 0 else outr.append(0)        
     return cm, labels, pd.DataFrame({'activity_id': labels, 'precision':outp, 'recall':outr})
 
 def score_sk(data):

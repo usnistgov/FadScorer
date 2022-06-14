@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 import io
 
-# Tests: scoring-execution, hd5 gen, csv-gen, map-score
+# Tests: 
+#
+# - scoring-execution
+# - output file generation (hd5),
+# - compares map-scores for top confidence score selection
+# - check csv from hd5 extraction
 
 def scoring_run(refFile, hypFile, topk, outDir):
     ds = Dataset(load_ref(refFile), load_hyp(hypFile))    
@@ -19,8 +24,8 @@ def scoring_run(refFile, hypFile, topk, outDir):
     write_system_level_scores(os.path.join(outDir, 'system_ac_scores.csv'), data)
     write_activity_level_scores(os.path.join(outDir, 'activity_ac_scores.csv'), aData)
 
-# Perfect score
 def test_scoring_match_3(tmpdir):
+    """ Perfect Score """
     scoring_run('testdata/ac_ref_2x3.csv', 'testdata/ac_hyp_2x3_perf.csv', 1, tmpdir)
     assert(list(io.open(tmpdir + "/system_ac_scores.csv")) == 
         list(io.open("testrefs/test_scoring_match_3/system_ac_scores.csv")))

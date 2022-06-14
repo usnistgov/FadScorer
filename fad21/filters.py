@@ -7,23 +7,17 @@ from .datatypes import Dataset
 from .io import *
 from .metrics import *
 
+import pdb
+
 log = logging.getLogger(__name__)
 
-def prep_testdata_dev(ds):
-    """ Dev Version. Docs See prep_testdata """    
-    ds.ref['ground_truth'] = 1
-    prednum = len(ds.hyp.activity_id.unique())    
-    mpred = ds.hyp[ds.hyp.activity_id.isin(ds.ref.activity_id)]
-    log.info("[xform] {} matching activities [gt X pred] | {} total pred activities.".format(len(mpred.activity_id.unique()), prednum))
-    mpred = ds.ref.merge(mpred, how='right', on=['video_file_id', 'activity_id'])
-    return mpred
-
-def prep_testdata(ds):
-    """ Prelim. Cleanup Function.
+def prep_ac_data(ds):
+    """ Cleanup System Output
     - add binary label to GT
     - deduplicate (should ideally have no duplicates)
     - subset PRED for matching GT activities only
     - merge GT and PRED tables into one dataframe.
+    - will NOT account for missing video_id ! Add those first to hyp.
 
     Computes tidy-dataframe w/ VideoID, GT, GT+Pred-acitivy Labels and
     Confidence score and stores it in [ds.hyp].
@@ -35,9 +29,14 @@ def prep_testdata(ds):
     # For joining gt vs. pred
     ds.ref['ground_truth'] = 1
     # Subset hypdata only for matching activities with reference.activity_id
-    prednum = len(ds.hyp.activity_id.unique())    
-    mpred = ds.hyp[ds.hyp.activity_id.isin(ds.ref.activity_id)]
-    log.info("[xform] {} matching activities [gt X pred] | {} total pred activities.".format(len(mpred.activity_id.unique()), prednum))
+    prednum = len(ds.hyp.activity_id.unique())
+    # Append __missed_detection__ label
+    #if '__missed_detection__' in ds.hyp.activity_id:        
+    ds.activity_ids = np.append(ds.activity_ids, '__missed_detection__')
+    
+    mpred = ds.hyp[ds.hyp.activity_id.isin(ds.activity_ids)]
+    log.info("[xform] {} matching activities [gt X pred] | {} total pred activities.".
+        format(len(mpred.activity_id.unique()), prednum))
 
     # Right-Join to find relevant hyp vs. reference 
     # (non-relevant GT will be NaN, relevant will be 1)
@@ -46,7 +45,7 @@ def prep_testdata(ds):
     mpred.loc[mpred['ground_truth'].isnull(), 'ground_truth'] = 0    
 
     # Merge GT and PRED into one big dataset incl. binary gt
-    smerge0 = mpred.merge(ds.ref, how='left', on='video_file_id', suffixes=('_pred', '_gt'))        
+    smerge0 = mpred.merge(ds.ref, how='left', on='video_file_id', suffixes=('_pred', '_gt'))
     ds.register = smerge0.drop('ground_truth_gt', axis=1).rename(columns={'ground_truth_pred':'ground_truth'})
 
 def tad_check_for_nan(ds):
@@ -72,6 +71,31 @@ def filter_by_activity(ds, activity_id_list):
     Returns: filtered list
     """    
     ds.ref.loc[ds.ref.activity_id.isin(activity_id_list)]
+
+def append_missing_video_id(ds):
+    """ 
+    Like 'detect_missing_video_id' but instead of throwing an error it does
+    create a new entry in the dataset w/ the missing video-id and a '__missed_detection__' 
+    activity_id label w/ confidence_score of 1.0.
+
+    :params DataSet ds: Dataset w/ ref and hyp data
+    """
+    ds.ref['video_file_id'] = pd.Categorical(ds.ref.video_file_id)
+    ds.hyp['video_file_id'] = pd.Categorical(ds.hyp.video_file_id)
+    ref_labels = ds.ref['video_file_id'].unique()
+    hyp_labels = ds.hyp['video_file_id'].unique()
+    label_distance = len(set(ref_labels) - set(hyp_labels))
+    if label_distance > 0:                
+        missing_vid = ds.ref[np.logical_not(ds.ref.video_file_id.isin(ds.hyp.video_file_id))]
+        output = [ds.hyp]
+        for index, entry in missing_vid.iterrows():
+            log.warning("Appending missing: {}".format(entry.video_file_id))
+            output.append(pd.DataFrame(data={
+                'video_file_id': entry.video_file_id,
+                'activity_id': '__missed_detection__', 
+                'confidence_score': 1.0
+                }, index=[0]))
+        ds.hyp = pd.concat(output)
 
 def prep_tad_data(ds):
     """ 
@@ -117,16 +141,24 @@ def prep_tad_data(ds):
     else:       
         return pd.concat(output)
 
-def select_by_topk(ds, k_value=1):
+def select_by_top_k_confidence(ds, k_value=0):
     """ Select top-k by using confidence score across video_file_id-groups.
+    - ds.register must be set
     - if k_value = 0 only sort by confidence score, keeping all
-    """
+    """    
     if k_value == 0:
         return ds.register.sort_values(["activity_id_gt", "confidence_score"], ascending=False)
     else:
         # using groupby + head is ~20x faster than using index + nlargest
         return ds.register.sort_values(["activity_id_gt", "confidence_score"], ascending=False).groupby('video_file_id').head(k_value)
 
+def select_by_topk(ds, k_value=1):
+    """ DEPRECATE """
+    if k_value == 0:
+        return ds.register.sort_values(["activity_id_gt", "confidence_score"], ascending=False)
+    else:
+        # using groupby + head is ~20x faster than using index + nlargest
+        return ds.register.sort_values(["activity_id_gt", "confidence_score"], ascending=False).groupby('video_file_id').head(k_value)
 
 def gen_md_data(vfid, activity, refdata):
     """

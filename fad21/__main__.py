@@ -6,6 +6,7 @@ import traceback
 from .generation import ACGenerator, TADGenerator
 from .scoring import score_ac, score_tad
 from .validation import validate_ac, validate_tad, validate_gt, validate_ac_via_index
+from .filters import append_missing_video_id
 from .datatypes import Dataset
 from .io import *
 from .plot import plot_tad, plot_ac
@@ -42,14 +43,20 @@ def ac_scorer_cmd(args):
     - score
     - extract + print
     """    
-    ensure_output_dir(args.output_dir)    
+    
     ds = Dataset(load_ref(args.reference_file), load_hyp(args.hypothesis_file))
+    log.debug("Loaded REF/HYP:")
     log.debug(ds)
+    ensure_output_dir(args.output_dir)    
     process_subset_args(args, ds)
     # Prevent auto-filtering of faulty data    
     if not args.skip_validation:
-        validate_ac(ds)     
+        validate_ac(ds)
+    log.debug("Validated:")     
     log.debug(ds)
+    # Account for missing video-id by adding vid-aid entry to system output.
+    append_missing_video_id(ds)
+
     argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
     score_ac(ds, args.metrics, int(args.topk), args.output_dir, argstr)    
     h5f = h5_open_archive(os.path.join(args.output_dir, 'scoring_results.h5'))
@@ -73,7 +80,7 @@ def tad_scorer_cmd(args):
     - extract + print
     """
     ensure_output_dir(args.output_dir)
-    ds = Dataset(load_tad_ref(args.reference_file), load_tad_hyp(args.hypothesis_file))    
+    ds = Dataset(load_tad_ref(args.reference_file), load_tad_hyp(args.hypothesis_file))        
     log.debug(ds)
     process_subset_args(args, ds)
     # Prevent auto-filtering of faulty data    
@@ -132,8 +139,9 @@ def main(args=None):
     parser_score_ac.add_argument("-a", '--activity_list_file', type=str, required=False, help="Use to filter activities from scoring (REF + HYP)")
     parser_score_ac.add_argument("-f", '--video_list_file', type=str, required=False, help="Used to filter files from scoring (REF + HYP)")
     parser_score_ac.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
+    # TODO: move/add top-1 and top-5 metrics to metrics array
     parser_score_ac.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
-    parser_score_ac.add_argument("-t", "--topk", nargs='?', default="1")
+    parser_score_ac.add_argument("-t", "--filter_top_n", nargs='?', default="0", help="Use only top-n confidence system results (0=all)")
     parser_score_ac.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
     parser_score_ac.set_defaults(func = ac_scorer_cmd)
 

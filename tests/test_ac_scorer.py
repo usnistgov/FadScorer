@@ -19,7 +19,6 @@ def scoring_run(refFile, hypFile, topk, outDir):
     write_system_level_scores(os.path.join(outDir, 'system_ac_scores.csv'), data)
     write_activity_level_scores(os.path.join(outDir, 'activity_ac_scores.csv'), aData)
 
-
 def test_scoring_match_3(tmpdir):
     scoring_run('testdata/ac_ref_2x3.csv', 'testdata/ac_hyp_2x3_perf.csv', 1, tmpdir)
     assert(list(io.open(tmpdir + "/system_ac_scores.csv")) == 

@@ -36,20 +36,24 @@ def score_pr(data):
     :returns list: __cm__ (matrix), __labels__ (list), __data__ (dataframe: _activity_id,precision,recall_)
     """
     # Compute confusion-matrix
-    labels = data['activity_id_gt'].unique()
+    labels = data['activity_id_gt'].unique()        
+    labels = np.append(labels, '__missed_detection__')
     cm = skm.confusion_matrix(data.activity_id_gt, data.activity_id_pred, labels=labels)
     # Compute Precision/Recall per class from confusion-matrix    
     spred = cm.sum(axis=0)
     sgt = cm.sum(axis=1)
     outp, outr = [], []    
-    for i in range(0, len(cm)):
-        outp.append(cm[i,i]/spred[i])
-        outr.append(cm[i,i]/sgt[i])
+    for i in range(0, len(cm)):        
+        outp.append(cm[i,i]/spred[i])        
+        if sgt[i] > 0: 
+            outr.append(cm[i,i]/sgt[i])
+        else: # Account for __missed_detection__'s 0 sum avoiding division/0
+            outr.append(0)
     return cm, labels, pd.DataFrame({'activity_id': labels, 'precision':outp, 'recall':outr})
 
 def score_sk(data):
     """Run SKLearn Classification Report Function
-
+    (does not account for missed detections)
     :param dataframe data: __activity_id_gt__, __activity_id_pred__
     :returns object: sklearn report data
     """
@@ -91,15 +95,21 @@ def compute_precision_score(data, tad_mode = False):
     - __ground_thruth__ : [Array] w/ binary 1/0 labels from pred.
 
     """
-    labels = data['activity_id_gt'].unique()    
+    labels = data['activity_id_gt'].unique()
+    labels = np.append(labels, '__missed_detection__')
+    #import pdb
+    #pdb.set_trace()
     y = []
     for i in labels:
         if tad_mode == True:
-            # Include only expected TP/FP
-            subdata = data.loc[data.activity_id_gt == i]        
+            # Include only relevant TP/FN
+            subsel = (data.activity_id_gt == i)
         else:        
-            # Include expected TP/FP + hyp misdetection FP
-            subdata = data.loc[(data.activity_id_gt == i) | (data.activity_id_pred == i)]
+            # Include relevant TP/FN + misdetection FP
+            subsel = pd.Index((data.activity_id_gt == i) | (data.activity_id_pred == i))
+
+        subdata = data.loc[subsel]
+
         y_gt = subdata.ground_truth
         y_pred = subdata.confidence_score
         #print(subdata)
@@ -132,7 +142,10 @@ def compute_precision_score(data, tad_mode = False):
 
             # Using the max precision value per recall slot
             ap_auc = np.trapz(precision[::-1], recall[::-1])
-        y.append([i, ap, ap_interp, ap_11, ap_101, ap_auc, precision, recall, thresholds, y_gt.values]) 
+
+        # Skip missed detection in final report
+        if i != '__missed_detection__':
+            y.append([i, ap, ap_interp, ap_11, ap_101, ap_auc, precision, recall, thresholds, y_gt.values]) 
     return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'ap_11', 'ap_101', 'ap_auc', 'precision', 'recall', 'thresholds', 'ground_truth'])
 
 class MetricsValidationError(Exception):

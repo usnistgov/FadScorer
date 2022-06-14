@@ -27,4 +27,3 @@ def test_header_ignoring_spaces():
     ref = fad21.load_ref("testdata/ac_ref_header_spaces.csv")
     assert 'video_file_id' in ref
     assert 'activity_id' in ref
-

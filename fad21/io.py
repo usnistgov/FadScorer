@@ -11,6 +11,10 @@ from .validation import ValidationError
 
 log = logging.getLogger(__name__)
 
+def eprint(*args, **kwargs):
+    """ Print to stderr instead of stdout """    
+    print(*args, file=sys.stderr, **kwargs)
+
 def csv_has_no_header(file_name):
     """ Check for header in first line """
     with open(file_name) as f:

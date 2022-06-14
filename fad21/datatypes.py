@@ -45,8 +45,10 @@ class Dataset(object):
         self.ref = gt
         self.hyp = pred
         self.register = register
+        # Default to use all activity Id. 
         if 'activity_id' in self.ref:
             self.activity_ids = self.ref['activity_id'].unique()
+        # Default to use all video Id. 
         self.video_ids = self.ref['video_file_id'].unique()
 
     def __repr__(self):

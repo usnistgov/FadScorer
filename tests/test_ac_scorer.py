@@ -40,7 +40,7 @@ def test_scoring_1fp_3(tmpdir):
         list(io.open("testrefs/test_scoring_1fp_3/activity_ac_scores.csv")))        
 
 def test_scoring_2fp_3(tmpdir):
-    scoring_run('testdata/ac_ref_2x3.csv', 'testdata/ac_hyp_2x3_2fp.csv', 1, tmpdir)
+    scoring_run('testdata/ac_ref_2x3.csv', 'testdata/ac_hyp_2x3_2fp.csv', 0, tmpdir)
     assert(list(io.open(tmpdir + "/system_ac_scores.csv")) ==
         list(io.open("testrefs/test_scoring_2fp_3/system_ac_scores.csv")))
     assert(list(io.open(tmpdir + "/activity_ac_scores.csv")) ==

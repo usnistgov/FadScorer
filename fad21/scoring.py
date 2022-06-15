@@ -17,7 +17,7 @@ from .metrics import _sumup_ac_system_level_scores, _sumup_ac_activity_level_sco
 
 log = logging.getLogger(__name__)
 
-def score_ac(ds, metrics=['map'], topk=0, output_dir=None, argstr = "{}"):
+def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"):
     """ Score System output (hypothesis) of Activity Classification Task (AC)
     
     :param fad21.Dataset ds:          Dataset Object w/ REF + HYP
@@ -30,10 +30,20 @@ def score_ac(ds, metrics=['map'], topk=0, output_dir=None, argstr = "{}"):
     - results     metrics for system level
     - al_results  metrics for activity level
     """
+    # Just a safety check in case this is called from somewhere else than main.
     detect_out_of_scope_hyp_video_id(ds)
+
+    # Sequence matters here !
+
+    # Fix out of scope and  NA's
+    remove_out_of_scope_activities(ds)
+    # Subselect by confidence scores
+    ds.hyp = filter_by_top_k_confidence(ds.hyp,filter_top_n)
+    # Fix missing entries (adds __missed_detection__ label)
     append_missing_video_id(ds)
+    # Rectify 
     prep_ac_data(ds)
-    data = Dataset(ds.ref, ds.hyp, select_by_topk(ds,topk)).register
+    data = ds.register
     
     #cm, labels, pr_stats = score_pr(data)
     if len(data) > 0:

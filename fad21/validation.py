@@ -32,8 +32,7 @@ def validate_gt(ds):
 
 def detect_missing_video_id(ds):
     """ Validate System Output for missing video-id against REF
-    :params DataSet ds: Dataset w/ ref and hyp data
-    
+    :params DataSet ds: Dataset w/ ref and hyp data    
     """
     ds.ref['video_file_id'] = pd.Categorical(ds.ref.video_file_id)
     ds.hyp['video_file_id'] = pd.Categorical(ds.hyp.video_file_id)
@@ -74,14 +73,21 @@ def validate_pred(ds):
     # check for unknown labels in pred
     label_distance = len(set(pred_labels) - set(gt_labels))
     if label_distance > 0:
-        log.warning("System output contains {} extra classes not in ground-truth.".format(label_distance))
+        log.warning("System output contains {} extra activites not in ground-truth.".format(label_distance))        
+
+    # Check for N/A activities
+    hyp_na_sum = ds.hyp.activity_id.isna().sum()
+    if hyp_na_sum > 0:
+        log.warning("{} entries missing activity_id labels.".format(hyp_na_sum))
 
     # Create subset of vids from reference
-    pred_vid_in_gt = ds.hyp[ds.hyp.video_file_id.isin(ds.ref.video_file_id)]
-    # Check if there are any PRED:activity-id which do not exist in GT:activity_id
-    # (which represents a misclassification but with an unknown class)
-    matching_pred = pred_vid_in_gt[pred_vid_in_gt.activity_id.isin(ds.ref.activity_id)]
-    #if len(matching_pred) != len(pred_vid_in_gt):
+    pred_vid_in_gt = ds.hyp[ds.hyp.video_file_id.isin(ds.ref.video_file_id.unique())]
+    # Check MD's where PRED:activity-id does do not exist in GT:activity_id
+    #if label_distance > 0:
+    #    log.debug(pred_vid_in_gt[~pred_vid_in_gt.activity_id.isin(ds.ref.activity_id)].activity_id)
+    matching_pred = pred_vid_in_gt[pred_vid_in_gt.activity_id.isin(ds.ref.activity_id.unique())]
+    if len(matching_pred) != len(pred_vid_in_gt):
+        log.warning("{} entries will be dropped due to mismatched activites.".format(len(pred_vid_in_gt) - len(matching_pred)))
     #    raise ValidationError("System output contains unknown activity_id. {} mismatched activities found."
     #        .format(len(pred_vid_in_gt) - len(matching_pred)))
 

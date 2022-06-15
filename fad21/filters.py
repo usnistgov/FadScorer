@@ -12,8 +12,9 @@ import pdb
 log = logging.getLogger(__name__)
 
 def prep_ac_data(ds):
-    """ Cleanup System Output
-    - add binary label to GT
+    """ Create Register entry w/ aligned and cleaned up hypothesis data
+
+    - add binary label to REF
     - deduplicate (should ideally have no duplicates)
     - subset PRED for matching GT activities only
     - merge GT and PRED tables into one dataframe.
@@ -30,12 +31,13 @@ def prep_ac_data(ds):
     ds.ref['ground_truth'] = 1
     # Subset hypdata only for matching activities with reference.activity_id
     prednum = len(ds.hyp.activity_id.unique())
-    # Append __missed_detection__ label
-    #if '__missed_detection__' in ds.hyp.activity_id:        
+    
+    # Append __missed_detection__ label to ds-list
+    #  if '__missed_detection__' in ds.hyp.activity_id:        
     ds.activity_ids = np.append(ds.activity_ids, '__missed_detection__')
     
     mpred = ds.hyp[ds.hyp.activity_id.isin(ds.activity_ids)]
-    log.info("[xform] {} matching activities [gt X pred] | {} total pred activities.".
+    log.info("[xform] {} matching activities [gt X pred] out of total {} pred activities.".
         format(len(mpred.activity_id.unique()), prednum))
 
     # Right-Join to find relevant hyp vs. reference 
@@ -72,11 +74,24 @@ def filter_by_activity(ds, activity_id_list):
     """    
     ds.ref.loc[ds.ref.activity_id.isin(activity_id_list)]
 
+def remove_out_of_scope_activities(ds):
+    """ 
+    If there are any activity-id which are out of scope or NA, whole entry is removed.    
+    
+    Side Effects:
+    -------------
+    - Modifies ds.hyp
+    """    
+    ds.hyp.drop(ds.hyp[~ds.hyp.activity_id.isin(ds.ref.activity_id.unique())].index, inplace = True)
+
 def append_missing_video_id(ds):
     """ 
-    Like 'detect_missing_video_id' but instead of throwing an error it does
-    create a new entry in the dataset w/ the missing video-id and a '__missed_detection__' 
-    activity_id label w/ confidence_score of 1.0.
+    Create a new entry in the dataset based on missing video_file_id w/ a
+    '__missed_detection__' activity_id label and confidence_score of 1.0.
+
+    Side Effects:
+    -------------
+    - Modifies ds.hyp
 
     :params DataSet ds: Dataset w/ ref and hyp data
     """
@@ -141,16 +156,16 @@ def prep_tad_data(ds):
     else:       
         return pd.concat(output)
 
-def select_by_top_k_confidence(ds, k_value=0):
+def filter_by_top_k_confidence(data, k_value=0):
     """ Select top-k by using confidence score across video_file_id-groups.
-    - ds.register must be set
+    - data requires [activity_id, conf and video_id]    
     - if k_value = 0 only sort by confidence score, keeping all
     """    
     if k_value == 0:
-        return ds.register.sort_values(["activity_id_gt", "confidence_score"], ascending=False)
+        return data.sort_values(["activity_id", "confidence_score"], ascending=False)
     else:
         # using groupby + head is ~20x faster than using index + nlargest
-        return ds.register.sort_values(["activity_id_gt", "confidence_score"], ascending=False).groupby('video_file_id').head(k_value)
+        return data.sort_values(["activity_id", "confidence_score"], ascending=False).groupby('video_file_id').head(k_value)
 
 def select_by_topk(ds, k_value=1):
     """ DEPRECATE """

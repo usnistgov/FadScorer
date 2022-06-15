@@ -54,11 +54,10 @@ def ac_scorer_cmd(args):
         validate_ac(ds)
     log.debug("Validated:")     
     log.debug(ds)
-    # Account for missing video-id by adding vid-aid entry to system output.
-    append_missing_video_id(ds)
-
+    
     argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
-    score_ac(ds, args.metrics, int(args.topk), args.output_dir, argstr)    
+    score_ac(ds, args.metrics, int(args.filter_top_n), args.output_dir, argstr)
+
     h5f = h5_open_archive(os.path.join(args.output_dir, 'scoring_results.h5'))
     data = h5_extract_system_scores(h5f)          
     aData = h5_extract_activity_scores(h5f)

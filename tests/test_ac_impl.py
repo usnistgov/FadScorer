@@ -43,7 +43,18 @@ def test_3ref_single_1fp(tmpdir):
             activity_id  precision    recall
           person_twirls       1.00  0.666667
        person_rubs_eyes       0.75  1.000000
-           person_jumps       1.00  1.000000)    
+           person_jumps       1.00  1.000000)
+
+    > AP Breakdown: (non-interp. aP) := sum_n (r_n-r_n-1)*p_n 
+    >   python:= -np.sum(np.diff(recall) * np.array(precision)[:-1])
+
+ 	precision                    recall                         activity_id 	 thresholds
+ 	[0.667, 0.5, 0.0, 1.0]       [1.0, 0.5, 0.0, 0.0]           person_twirls 	 [0.4, 0.6, 0.7]
+ 	[0.75, 0.667, 0.5, 0.0, 1.0] [1.0, 0.667, 0.333, 0.0, 0.0]  person_rubs_eyes [0.4, 0.5, 0.6, 0.7]
+ 	[1.0, 1.0, 1.0, 1.0]         [1.0, 0.667, 0.333, 0.0]       person_jumps     [0.4, 0.5, 0.6]
+
+    > person_twirls   : 0.667*0.5 + 0.5+0.5 = 0.3333+ 0.25 + 0 + 0 ~= 0.583
+    > person_rubs_eyes: 
     """
     data, aData = scoring_run('testdata/ac_3ref.csv', 'testdata/ac_3hyp1fp.csv', 0, tmpdir)
     hData = {}
@@ -51,8 +62,8 @@ def test_3ref_single_1fp(tmpdir):
         hData[entry[0]] = entry[2]
     assert(len(hData) == 3)
     # resulting aP == P/R values here
-    assert(hData['person_twirls'] == pytest.approx(0.667, 0.01))
-    assert(hData['person_rubs_eyes'] == pytest.approx(0.75, 0.1))
+    assert(hData['person_twirls'] == pytest.approx(0.583, 0.01))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.639, 0.1))
     assert(hData['person_jumps'] == pytest.approx(1.0, 0.1))
 
 
@@ -82,7 +93,7 @@ def test_3ref_single_2fp(tmpdir):
         person_rubs_eyes   0.750000  1.000000
             person_jumps   1.000000  0.666667
 
-    [person_twirls]    
+    [person_twirls]
     precision                           recall               thr             gt
     [0.5, 0.3333333333333333, 0.0, 1.0] [1.0, 0.5, 0.0, 0.0] [0.4, 0.6, 0.7] [0.0, 1.0, 1.0, 0.0]
     """
@@ -92,9 +103,9 @@ def test_3ref_single_2fp(tmpdir):
         hData[entry[0]] = entry[2]
     assert(len(hData) == 3)
     # resulting aP == P/R values here
-    assert(hData['person_twirls'] == pytest.approx(0.5, 0.1))
-    assert(hData['person_rubs_eyes'] == pytest.approx(0.75, 0.1))
-    assert(hData['person_jumps'] == pytest.approx(0.667, 0.01))
+    assert(hData['person_twirls'] == pytest.approx(0.417, 0.01))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.639, 0.01))
+    assert(hData['person_jumps'] == pytest.approx(0.583, 0.01))
 
 def test_3ref_single_1fp1md(tmpdir):
     """ USE-CASE: 3 classes, 1fp @ top confidence + 1 missing video-id
@@ -129,9 +140,9 @@ def test_3ref_single_1fp1md(tmpdir):
         hData[entry[0]] = entry[2]
     assert(len(hData) == 3)
     # resulting aP == P/R values here
-    assert(hData['person_twirls'] == pytest.approx(0.667, 0.01))
-    assert(hData['person_rubs_eyes'] == pytest.approx(0.75, 0.1))
-    assert(hData['person_jumps'] == pytest.approx(0.667, 0.01))
+    assert(hData['person_twirls'] == pytest.approx(0.583, 0.01))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.639, 0.1))
+    assert(hData['person_jumps'] == pytest.approx(0.583, 0.01))
 
 def test_3ref_multihyp_1fp_multi(tmpdir):
     """ USE-CASE: 3 Classes w/ 3 hyp each w/ 1fp @ top confidence
@@ -182,8 +193,8 @@ def test_3ref_multihyp_1fp_multi(tmpdir):
         hData[entry[0]] = entry[2]
     assert(len(hData) == 3)
     # resulting aP == P/R values here
-    assert(hData['person_twirls'] == pytest.approx(0.889, 0.01))
-    assert(hData['person_rubs_eyes'] == pytest.approx(0.9, 0.1))
+    assert(hData['person_twirls'] == pytest.approx(0.771, 0.01))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.786, 0.01))
     assert(hData['person_jumps'] == pytest.approx(1.0, 0.1))
 
 
@@ -220,6 +231,6 @@ def test_3ref_single_1ma(tmpdir):
         hData[entry[0]] = entry[2]
     assert(len(hData) == 3)
     # resulting aP == P/R values here
-    assert(hData['person_twirls'] == pytest.approx(0.667, 0.01))
+    assert(hData['person_twirls'] == pytest.approx(0.583, 0.01))
     assert(hData['person_rubs_eyes'] == pytest.approx(1.0, 0.1))
     assert(hData['person_jumps'] == pytest.approx(1.0, 0.1))

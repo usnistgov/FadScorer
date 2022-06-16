@@ -291,11 +291,11 @@ def h5_iou_aggregator(h5f, iouThr):
 def _sumup_ac_system_level_scores(metrics, pr_scores):
     """ Map internal to public representation. """
     co = []
-    if 'map' in metrics:     co.append(['mAP',     round(np.mean(pr_scores.ap_interp), 3)]) # pinterp + AP
+    if 'map' in metrics:     co.append(['mAP',     round(np.mean(pr_scores.ap), 3)]) # pinterp + AP
     if 'map_11' in metrics:  co.append(['mAP_11' , round(np.mean(pr_scores.ap_11), 3)])
     if 'map_101' in metrics: co.append(['mAP_101', round(np.mean(pr_scores.ap_101), 3)])
     if 'map_auc' in metrics: co.append(['mAP_auc', round(np.mean(pr_scores.ap_auc), 3)])
-    if 'map_avg' in metrics: co.append(['mAP_avg', round(np.mean(pr_scores.ap), 3)])
+    if 'map_avg' in metrics: co.append(['mAP_avg', round(np.mean(pr_scores.ap_interp), 3)])
     return co
 
 def _sumup_ac_activity_level_scores(metrics, pr_scores):

@@ -234,3 +234,21 @@ def test_3ref_single_1ma(tmpdir):
     assert(hData['person_twirls'] == pytest.approx(0.583, 0.01))
     assert(hData['person_rubs_eyes'] == pytest.approx(1.0, 0.1))
     assert(hData['person_jumps'] == pytest.approx(1.0, 0.1))
+
+def test_2ref_50_uniform_confidence(tmpdir):
+    """ USE-CASE: 2 classes, 50 entries each, 50%miss w/ uniform confidence
+    scores for both from [0.02 .. 1.00]
+
+    Expected output: mAP: 0.25
+    """    
+    data, aData = scoring_run('testdata/ac_ref_2x50.csv', 'testdata/ac_hyp_2x50_uni.csv', 0, tmpdir)
+    hData = {}
+    for entry in aData:
+        hData[entry[0]] = entry[2]
+    assert(len(hData) == 2)
+    # resulting aP == P/R values here
+    assert(hData['person_twirls'] == pytest.approx(0.0, 0.1))
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.5, 0.01))    
+
+
+    

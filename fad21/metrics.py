@@ -303,11 +303,11 @@ def _sumup_ac_activity_level_scores(metrics, pr_scores):
     act = {}
     for index, row in pr_scores.iterrows():
         co = {}
-        if 'map' in metrics:     co['ap'] =      round(row['ap_interp'], 3)
+        if 'map' in metrics:     co['ap'] =      round(row['ap'], 3)
         if 'map_11' in metrics:  co['ap_11'] =   round(row['ap_11'], 3)
         if 'map_101' in metrics: co['ap_101'] =  round(row['ap_101'], 3)
         if 'map_auc' in metrics: co['ap_auc'] =  round(row['ap_auc'], 3)
-        if 'map_avg' in metrics: co['ap_avg'] =  round(row['ap'], 3)
+        if 'map_avg' in metrics: co['ap_avg'] =  round(row['ap_interp'], 3)
         act[row['activity_id']] = co
     return act
 

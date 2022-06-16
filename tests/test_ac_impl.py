@@ -48,13 +48,13 @@ def test_3ref_single_1fp(tmpdir):
     > AP Breakdown: (non-interp. aP) := sum_n (r_n-r_n-1)*p_n 
     >   python:= -np.sum(np.diff(recall) * np.array(precision)[:-1])
 
- 	precision                    recall                         activity_id 	 thresholds
- 	[0.667, 0.5, 0.0, 1.0]       [1.0, 0.5, 0.0, 0.0]           person_twirls 	 [0.4, 0.6, 0.7]
- 	[0.75, 0.667, 0.5, 0.0, 1.0] [1.0, 0.667, 0.333, 0.0, 0.0]  person_rubs_eyes [0.4, 0.5, 0.6, 0.7]
- 	[1.0, 1.0, 1.0, 1.0]         [1.0, 0.667, 0.333, 0.0]       person_jumps     [0.4, 0.5, 0.6]
+ 	precision                    recall                        activity_id 	    thresholds
+ 	[0.667, 0.5, 0.0, 1.0]       [1.0, 0.5, 0.0, 0.0]          person_twirls 	[0.4, 0.6, 0.7]
+ 	[0.75, 0.667, 0.5, 0.0, 1.0] [1.0, 0.667, 0.333, 0.0, 0.0] person_rubs_eyes [0.4, 0.5, 0.6, 0.7]
+ 	[1.0, 1.0, 1.0, 1.0]         [1.0, 0.667, 0.333, 0.0]      person_jumps     [0.4, 0.5, 0.6]
 
     > person_twirls   : 0.667*0.5 + 0.5+0.5 = 0.3333+ 0.25 + 0 + 0 ~= 0.583
-    > person_rubs_eyes: 
+    > person_rubs_eyes: 0.75*
     """
     data, aData = scoring_run('testdata/ac_3ref.csv', 'testdata/ac_3hyp1fp.csv', 0, tmpdir)
     hData = {}

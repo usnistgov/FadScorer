@@ -9,7 +9,7 @@ from .validation import validate_ac, validate_tad, validate_gt, validate_ac_via_
 from .filters import append_missing_video_id
 from .datatypes import Dataset
 from .io import *
-from .plot import plot_tad, plot_ac
+from .plot import plot_tad, plot_ac, plot_all_activity_pr
 
 #
 # Public Scorer Version
@@ -114,8 +114,12 @@ def ac_hyp_validator_cmd(args):
 def plot_cmd(args):   
     h5f = h5_open_archive(args.score_file)    
     ensure_output_dir(args.output_dir)
-    if h5f.attrs['scorer-mode'] == 'AC':    
+    if h5f.attrs['scorer-mode'] == 'AC':   
         plot_ac(h5f, args.output_dir)
+        if args.generate_activity_plots:
+            odir = os.path.join(args.output_dir, "activities")
+            ensure_output_dir(odir)
+            plot_all_activity_pr(h5f, odir)
     else:
         plot_tad(h5f, args.output_dir, prefix=args.prefix)
 
@@ -162,6 +166,7 @@ def main(args=None):
     parser_validate_ac_hyp.set_defaults(func = ac_hyp_validator_cmd)
 
     parser_plot = subparsers.add_parser('plot-results', help='Extract system and activity results and generate plots.')
+    parser_plot.add_argument("-a", "--generate_activity_plots", action="store_true", default=False, help="Extract and output P/R plots for each activity individually (default: off)")
     parser_plot.add_argument("-f", '--score_file', type=str, required=True)    
     parser_plot.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
     parser_plot.add_argument("-p", "--prefix", help='Prefix to append to legend on TAD plot', type=str, default=None)

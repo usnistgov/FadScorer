@@ -6,9 +6,6 @@ from .io import *
 
 log = logging.getLogger(__name__)
 
-def plot_prt(h5f, path):
-    pass
-
 def plot_prs(h5f, root_path, title, output_fn):
     plt.style.use('_mpl-gallery')
     precDS = h5f["{}/prs/precision".format(root_path)]
@@ -41,11 +38,16 @@ def gen_sub_prs_plot(h5f, root_path, iou, fig, ax, prefix=None):
     ax.set(xlim=(0, 1), xticks=np.arange(0, 1, 0.1),
            ylim=(0, 1), yticks=np.arange(0, 1, 0.1))
 
-def plot_prt(h5f, root_path, output_fn):
+def plot_all_activity_pr(h5f, output_dir):
+    for activity in h5f['activity']:
+        ofn = os.path.join(output_dir, "{}.png".format(activity))        
+        plot_pr(h5f, "activity/{}".format(activity), ofn)
+
+def plot_pr(h5f, root_path, output_fn):
+    """ Plot Precision / Recall Curves """
     plt.style.use('_mpl-gallery')
-    precDS = h5f["{}/prs/precision".format(root_path)]
-    recallDS = h5f["{}/prs/recall".format(root_path)]
-    stderrDS = h5f["{}/prs/stderror".format(root_path)]
+    precDS = h5f["{}/prt/precision".format(root_path)]
+    recallDS = h5f["{}/prt/recall".format(root_path)]    
     x = recallDS[()]
     y = precDS[()]
     fig, ax = plt.subplots(figsize=(12,10), constrained_layout=True)    
@@ -55,7 +57,7 @@ def plot_prt(h5f, root_path, output_fn):
            ylim=(0, 1), yticks=np.arange(0, 1, 0.1))    
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
-    ax.set_title(root_path)        
+    ax.set_title(root_path)
     plt.savefig(output_fn)    
 
 def plot_ac(h5f, output_dir):    

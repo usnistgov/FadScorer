@@ -53,7 +53,7 @@ def ac_scorer_cmd(args):
     if not args.skip_validation:
         validate_ac(ds)
     log.debug("Validated:")     
-    log.debug(ds)
+    log.debug(ds)    
     
     argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
     score_ac(ds, args.metrics, int(args.filter_top_n), args.output_dir, argstr)

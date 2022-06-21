@@ -12,44 +12,31 @@ import pdb
 log = logging.getLogger(__name__)
 
 def prep_ac_data(ds):
-    """ Create Register entry w/ aligned and cleaned up hypothesis data
+    """ Produce 'Dataset.register' entry w/ aligned and cleaned up ref-hypothesis matches
 
-    - add binary label to REF
-    - deduplicate (should ideally have no duplicates)
-    - subset PRED for matching GT activities only
-    - merge GT and PRED tables into one dataframe.
-    - will NOT account for missing video_id ! Add those first to hyp.
-
-    Computes tidy-dataframe w/ VideoID, GT, GT+Pred-acitivy Labels and
-    Confidence score and stores it in [ds.hyp].
+    Tidy-dataframe w/ VideoID, ref and hyp activity labels and Confidence score.
 
     Parameters
     ----------
     ds: DataSet object, containing GT and PRED
     """    
-    # For joining gt vs. pred
-    ds.ref['ground_truth'] = 1
+    
     # Subset hypdata only for matching activities with reference.activity_id
-    prednum = len(ds.hyp.activity_id.unique())
+    prednum = len(ds.hyp.activity_id.unique())    
+    # Remove out of bound activities (this should be catched before by validation step)
+    fhyp = ds.hyp[ds.hyp.activity_id.isin(ds.activity_ids)]    
+    log.info("[xform] {} matching activities (refXhyp) out of {} activities in hypothesis.".
+        format(len(fhyp.activity_id.unique()), prednum))
+
+    # Careful here w/ undefined extra columns in ref- or hyp-data
+    # TP, FP, FN -> match of both: ref + hyp
+    # MD -> hyp := NaN, confidence_scorer := NaN
+    # TN -> filtered out
+    mdata = ds.ref.merge(fhyp, how='outer', on='video_file_id', suffixes=('_ref', '_hyp'))
+    # Make sure missed data is handled appropriately when using threshold of >0.0
+    mdata.loc[mdata.activity_id_hyp.isna(), ['activity_id_hyp', 'confidence_score'] ] = ['0', -1.0 ]    
+    ds.register = mdata
     
-    # Append __missed_detection__ label to ds-list
-    #  if '__missed_detection__' in ds.hyp.activity_id:        
-    ds.activity_ids = np.append(ds.activity_ids, '__missed_detection__')
-    
-    mpred = ds.hyp[ds.hyp.activity_id.isin(ds.activity_ids)]
-    log.info("[xform] {} matching activities [gt X pred] out of total {} pred activities.".
-        format(len(mpred.activity_id.unique()), prednum))
-
-    # Right-Join to find relevant hyp vs. reference 
-    # (non-relevant GT will be NaN, relevant will be 1)
-    mpred = ds.ref.merge(mpred, how='right', on=['video_file_id', 'activity_id'])
-    # NaN -> 0
-    mpred.loc[mpred['ground_truth'].isnull(), 'ground_truth'] = 0    
-
-    # Merge GT and PRED into one big dataset incl. binary gt
-    smerge0 = mpred.merge(ds.ref, how='left', on='video_file_id', suffixes=('_pred', '_gt'))
-    ds.register = smerge0.drop('ground_truth_gt', axis=1).rename(columns={'ground_truth_pred':'ground_truth'})
-
 def tad_check_for_nan(ds):
     """ De-NaN GT and PRED (should ideally not have nan activity_id)
     """    
@@ -87,7 +74,7 @@ def remove_out_of_scope_activities(ds):
 def append_missing_video_id(ds):
     """ 
     Create a new entry in the dataset based on missing video_file_id w/ a
-    '__missed_detection__' activity_id label and confidence_score of 1.0.
+    '_FN_' activity_id label and confidence_score of 1.0.
 
     Side Effects:
     -------------
@@ -104,10 +91,10 @@ def append_missing_video_id(ds):
         missing_vid = ds.ref[np.logical_not(ds.ref.video_file_id.isin(ds.hyp.video_file_id))]
         output = [ds.hyp]
         for index, entry in missing_vid.iterrows():
-            log.warning("Appending missing: {}".format(entry.video_file_id))
+            log.warning("(FN) Appending missing: {}".format(entry.video_file_id))
             output.append(pd.DataFrame(data={
                 'video_file_id': entry.video_file_id,
-                'activity_id': '__missed_detection__', 
+                'activity_id': '_FN_', 
                 'confidence_score': 1.0
                 }, index=[0]))
         ds.hyp = pd.concat(output)
@@ -264,3 +251,37 @@ def compute_alignment_matrix(pRef, pHyp, activity):
             
     #return [pRef, pHyp, iMat, cVec, rVec ]
     return [iMat, cVec, rVec, iVec]
+
+def aggregate_xy(xy_list, method="average", average_resolution=10):
+    """ Aggregate multiple xy arrays producing an y average incl. std-error.
+        
+    :param list xy_list: list of `[x,y]` arrays (x MUST be monotonically increasing !)
+    :param str method: only 'average' method supported
+    :param int average_resolution: number of interpolation points
+    :returns list: Interpolated arrays of __precision__, __recall__, __stderr__.
+    """
+    #pdb.set_trace()
+    if xy_list:
+        # Filtering data with missing value
+        is_valid = lambda dc: dc[0].size != 0 and dc[1].size != 0 and np.all(~np.isnan(dc[0])) and np.all(~np.isnan(dc[1]))        
+        xy_list_filtered = [dc for dc in xy_list if is_valid(dc)]
+        if xy_list_filtered:
+            # Longest x axis
+            max_fa_list = [max(dc[0]) for dc in xy_list_filtered]
+            max_fa = max(max_fa_list)
+            if method == "average":
+                x = np.linspace(0, max_fa, average_resolution)
+                ys = np.vstack([np.interp(x, data[0], data[1]) for data in xy_list_filtered])                
+                stds = np.std(ys, axis=0, ddof=0)
+                n = len(ys)
+                stds = stds / math.sqrt(n)
+                stds = 1.96 * stds
+                # (0,1) (minpfa, 1)
+                ys = [np.interp(x,
+                                np.concatenate((np.array([0, data[0].min()]), data[0])),
+                                np.concatenate((np.array([1, 1]),             data[1])))
+                                for data in xy_list_filtered]
+                aggregated_dc = [ x, (np.vstack(ys).sum(0) + len(xy_list) - len(xy_list_filtered)) / len(xy_list), stds ]
+                return aggregated_dc
+    log.error("Warning: No data remained after filtering, returning an empty array list")
+    return [ [], [], [] ]

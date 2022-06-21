@@ -1,13 +1,9 @@
 import numpy as np
 import pandas as pd
-import csv
-from sklearn import metrics as skm
-import json
 import logging
-
 from .datatypes import Dataset
 from .io import *
-
+from .aggregators import *
 
 # for aggregators, but FS/Format/FileIO stuff should not be here
 import math
@@ -15,140 +11,80 @@ import h5py
 
 log = logging.getLogger(__name__)
 
-def compute_precision_recall(cm, labels):
-    """ Given confusion-matrix and labels compute Precision & Recall of each class.
-
-    :param matrix cm: Confusion Matrix
-    :param list labels: List of Labels corresponding to __cm__
-    :returns dataframe: __activity_id__, __precision__ (list), __recall__ (list)
-    """
-    sum_pred, sum_gt, precision, recall = cm.sum(axis=0), cm.sum(axis=1), [], []
-    # CM is a square matrix
-    for i in range(0, len(cm)):
-        precision.append(cm[i,i]/sum_pred[i]) # TP/TP+FP
-        recall.append(cm[i,i]/sum_gt[i]) # TP/TP+FN
-    return(pd.DataFrame({'activity_id': labels, 'precision': precision, 'recall': recall}))
-
-def score_pr(data):
-    """ Precision/Recall from TP/FP/TN Counts across confusion matrix. 
-
-    :param dataframe data: __activity_id_gt__ and __activity_id_pred__
-    :returns list: __cm__ (matrix), __labels__ (list), __data__ (dataframe: _activity_id,precision,recall_)
-    """
-    # Compute confusion-matrix
-    labels = data['activity_id_gt'].unique()        
-    labels = np.append(labels, '__missed_detection__')
-    cm = skm.confusion_matrix(data.activity_id_gt, data.activity_id_pred, labels=labels)
-    # Compute Precision/Recall per class from confusion-matrix    
-    spred = cm.sum(axis=0)
-    sgt = cm.sum(axis=1)
-    outp, outr = [], []    
-    for i in range(0, len(cm)):        
-        # Account for __missed_detection__'s 0 sum avoiding division/0
-        outp.append(cm[i,i]/spred[i]) if spred[i] > 0 else outp.append(0)
-        outr.append(cm[i,i]/sgt[i]) if sgt[i] > 0 else outr.append(0)        
-    return cm, labels, pd.DataFrame({'activity_id': labels, 'precision':outp, 'recall':outr})
-
-def score_sk(data):
-    """Run SKLearn Classification Report Function
-    (does not account for missed detections)
-    :param dataframe data: __activity_id_gt__, __activity_id_pred__
-    :returns object: sklearn report data
-    """
-    return skm.classification_report(data.activity_id_gt, data.activity_id_pred, output_dict=True)
+class MetricsValidationError(Exception):
+    """Custom exception for error reporting."""
+    pass
 
 def generate_zero_scores(labels):
-    #import pdb
-    #pdb.set_trace() 
     y = []
     if len(labels)>0:
         for i in labels:
             y.append([i, 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0], [] ])
     else:
         log.error("No matching activities found in system output.")
-        y.append(['no_macthing_activity_placeholder', 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0], [] ])
-    return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'ap_11', 'ap_101', 'ap_auc', 'precision', 'recall', 'thresholds', 'ground_truth'])
+        y.append(['no_macthing_activity', 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0] ])
+    return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'precision', 'recall'])
 
-# Rename to compute_pr_curve
-def compute_precision_score(data, tad_mode = False):
-    """ Multi-Class Precision/Recall Curves (computed across each class individually).
+def compute_multiclass_pr(data):    
+    labels = data.activity_id_ref.unique()
 
-    > __Note__: prec,recall,thr are vectors with size varying on number of retrievals
-    per refernce-class as non relevant classes have already been excluded.
+    # linspace values have numerical errors..
+    #trange = np.linspace(1, 0, num=101, retstep=True)[0]
+    trange = np.array([1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0])
+    y = []    
+    
+    # Iterate over all activity-id isolating them into a binary DET case
+    for act in labels:
+        # Include only relevant TP/FP/FN
+        subsel = (data.activity_id_ref == act)
 
-    :param pd.dataframe data: __activity_id_gt__, __ground_truth__, __confidence_score__
-    :returns pd.dataframe: Dataframe w/ following columns
+        #subdata = data.loc[(data.activity_id_hyp == act) | (data.activity_id_ref == act)]
+        subdata = data.loc[subsel]        
+        
+        # pdb.set_trace()
+        # Count and drop missed detections
+        mlen = len(subdata.loc[subdata.activity_id_hyp == '0'])
+        subdata = subdata.drop(subdata[subdata.activity_id_hyp == '0'].index)        
+        trange = np.sort(subdata['confidence_score'].unique())
+        if trange[0] != 0.0:
+            trange = np.append(0.0, trange)
+        if trange[-1] != 1.0:
+            trange = np.append(trange, 1.0)
+        # Reverse the range to be always running from high thr to low thr to
+        # preserve order of p/r. This is needed to handle edgecases w/ 1 or 2
+        # degenerate points.
+        trange = trange[::-1]
+        #pdb.set_trace()
+        # Compute amount of missed detections for overall count
+        
+        alabels = [act, '0']        
+        precision,recall = [],[]        
 
-    > - __activity_id__ : Activity Label 
-    - __ap__ : Average precision score from sklearn (From docs: "This implementation is not
-         interpolated and is different from computing the area under the
-         precision-recall curve with the trapezoidal rule.")
-    - __ap_interp__ : Interpolated AP over ALL thresholds
-    - __ap_11__ : Interpolated AP over 11 equidistant thresholds
-    - __ap_101__ : Interpolated AP over 101 equidistant thresholds
-    - __ap_auc__ : Non-Interpolated AUC (integral)
-    - __precision__ : [Array] w/ precision scores per activity
-    - __recall__ : [Array] w/ recall scores per activity
-    - __thresholds__ : [Array] w/ thresholds at which p/r is computed
-    - __ground_thruth__ : [Array] w/ binary 1/0 labels from pred.
-
-    """
-    labels = data['activity_id_gt'].unique()
-    labels = np.append(labels, '__missed_detection__')
-    #import pdb
-    #pdb.set_trace()
-    y = []
-    for i in labels:
-        if tad_mode == True:
-            # Include only relevant TP/FN
-            subsel = (data.activity_id_gt == i)
-        else:        
-            # Include relevant TP/FN + misdetection FP
-            subsel = pd.Index((data.activity_id_gt == i) | (data.activity_id_pred == i))
-
-        subdata = data.loc[subsel]
-
-        y_gt = subdata.ground_truth
-        y_pred = subdata.confidence_score
-        #print(subdata)
-        ap, ap_interp, ap_11, ap_101, ap_auc = 0, 0, 0, 0, 0
-        # Handle no classes found (for robustness)
-        if sum(y_gt) == 0:            
-            precision, recall, thresholds = ([0., 0.], [0., 0], [0., 1.0])
-        else:
-            # NOTE: ap is mapped later to ap_avg !
-            # TODO: rename ap to ap_weighted
-            ap = skm.average_precision_score(y_gt, y_pred, average = "weighted")
-            #print(y_gt)
-            #print(y_pred)        
-            precision, recall, thresholds = skm.precision_recall_curve(y_gt, y_pred)
-
-            # Compute pinterp step-function using max
-            pinterp = np.maximum.accumulate(precision)[::-1]
-
-            # K-point interpolation (over all thresholds)
-            #
-            # skm adds a 1 at the end of the precision vector hence the [:-1] below
-            # ap_interp = np.sum(np.diff(recall[::-1])[::-1] * pinterp[::-1][:-1])
-            # For performance reaons let's use trapz though
-            ap_interp = np.trapz(pinterp, recall[::-1])
+        # Iterate over thresholds computing p/r for each CM
+        for thr in trange:        
+            tdata = subdata[(subdata.confidence_score >= thr)]         
+            tp, fp, fn = cm_binary(tdata.activity_id_ref, tdata.activity_id_hyp, act)
+            # all retrievals above threshold
+            fp += fn             
+            # retrievals below threshold + md as they are always excluded above
+            fn = len(subdata) - len(tdata) + mlen 
+            # counting missed detections in
+            # if (mlen > 0) & (thr == 0): fp += mlen                         
             
-            # N-Point interpolation (over N points interpolated @ thresholds)
-            # Note: pinterp must be used here.
-            ap_11 = np.mean(np.interp(np.linspace(0,1,11), recall[::-1], pinterp))
-            ap_101 = np.mean(np.interp(np.linspace(0,1,101), recall[::-1], pinterp))
+            prec = tp/(tp+fp) if (tp+fp >0) else 0.0            
+            # account for MD's: clamp to 0
+            if (mlen > 0) & (thr == 0): prec = 0
+            recl = tp/(tp+fn) if (tp+fn >0) else 0.0
+            
+            # Force precision of 1 @ recall of 0            
+            #print("act {}, thr {}, tp {}, fp {}, fn {}, p/r {}/{}, lent {}, ldata {}, mdata {}".format(
+            #   act, thr, tp, fp, fn, prec, recl, len(tdata), len(subdata), mlen))            
+            precision.append(prec)
+            recall.append(recl)
 
-            # Using the max precision value per recall slot
-            ap_auc = np.trapz(precision[::-1], recall[::-1])
-
-        # Skip missed detection in final report
-        if i != '__missed_detection__':
-            y.append([i, ap, ap_interp, ap_11, ap_101, ap_auc, precision, recall, thresholds, y_gt.values]) 
-    return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'ap_11', 'ap_101', 'ap_auc', 'precision', 'recall', 'thresholds', 'ground_truth'])
-
-class MetricsValidationError(Exception):
-    """Custom exception for error reporting."""
-    pass
+        # Build output
+        y.append([ act, precision, recall, trange ])
+    return pd.DataFrame(y, columns=['activity_id', 'precision', 'recall', 'thresholds' ])
 
 def compute_temp_iou(gstart, gend, pstart, pend):
     """ Compute __Temporal__ Intersection over Union (__IoU__) as defined in [1], Eq.(1) given start and endpoints of intervals __g__ and __p__.    
@@ -198,116 +134,27 @@ def compute_pr_scores_at_iou(mpred, iou_threshold):
     if len(mpred) > 0:
         # MD is -1
         data = pd.DataFrame(mpred.loc[(mpred.alignment != '-1') & (mpred.IoU >= iou_threshold)])
-        data.rename(columns={'alignment':'ground_truth', 'activity_id':'activity_id_gt'}, inplace=True)
+        data.rename(columns={'alignment':'ground_truth', 'activity_id':'activity_id_ref'}, inplace=True)
         return compute_precision_score(data, tad_mode=True)
     else:
         return generate_zero_scores(['zero_score'])
 
-def aggregate_xy(xy_list, method="average", average_resolution=500):
-    """ Aggregate multiple xy arrays producing an y average incl. std-error.
-        
-    :param list xy_list: list of `[x,y]` arrays (x MUST be monotonically increasing !)
-    :param str method: only 'average' method supported
-    :param int average_resolution: number of interpolation points
-    :returns list: Interpolated arrays of __precision__, __recall__, __stderr__.
-    """
-    if xy_list:
-        # Filtering data with missing value
-        is_valid = lambda dc: dc[0].size != 0 and dc[1].size != 0 and np.all(~np.isnan(dc[0])) and np.all(~np.isnan(dc[1]))        
-        xy_list_filtered = [dc for dc in xy_list if is_valid(dc)]
-        if xy_list_filtered:
-            # Longest x axis
-            max_fa_list = [max(dc[0]) for dc in xy_list_filtered]
-            max_fa = max(max_fa_list)
-            if method == "average":
-                x = np.linspace(0, max_fa, average_resolution)
-                ys = np.vstack([np.interp(x, data[0], data[1]) for data in xy_list_filtered])                
-                stds = np.std(ys, axis=0, ddof=0)
-                n = len(ys)
-                stds = stds / math.sqrt(n)
-                stds = 1.96 * stds
-                # (0,1) (minpfa, 1)
-                ys = [np.interp(x,
-                                np.concatenate((np.array([0, data[0].min()]), data[0])),
-                                np.concatenate((np.array([1, 1]),             data[1])))
-                                for data in xy_list_filtered]
-                aggregated_dc = [ x, (np.vstack(ys).sum(0) + len(xy_list) - len(xy_list_filtered)) / len(xy_list), stds ]
-                return aggregated_dc
-    log.error("Warning: No data remained after filtering, returning an empty array list")
-    return [ [], [], [] ]
+     
 
-def aggregator(output_dir):
-    """ Aggregate over all `ACTIVITY_*.h5` __files__ in output_dir using #aggregate_xy 
-    :param str output_dir: Name of directory to look for h5-files.
-    """
-    files = get_activity_h5_files(output_dir)
-    log.debug("Files to be aggregated: {}".format(files))
-    f_list = [ h5py.File(f, 'r') for f in files ]    
-    # dc['/prt'].attrs['activity_id'] 
-    # [ [x[],y[]], ..., [x[],y[]] ]
-    dlist = [ np.array([ dc['/prt/recall'][()], dc['/prt/precision'][()] ]) for dc in f_list ]
-    aggregated_xy = aggregate_xy(dlist)
-    output_fn = "{}/AGG_PRT_activities.h5".format(output_dir)
-    write_aggregated_pr_as_hdf5(output_fn, aggregated_xy)    
-    return None
-
-def h5_aggregator(h5f):
-    """ Aggregate over all activites within a h5 AC archive using #aggregate_xy
-    Keep in mind that H5 Files have an access lock.    
-    :param H5File h5f: H5 File Handle.
-    :returns list: See output of #aggregate_xy
-    """     
-    # [ [x[],y[]], ..., [x[],y[]] ]
-    activitiesG = h5f['activity']
-    dlist = []
-    for aName in activitiesG.keys():
-        activityG = activitiesG[aName]        
-        dlist.append(np.array([ activityG['prt/recall'][()], activityG['prt/precision'][()] ]))
-    aggXYArr = aggregate_xy(dlist)    
-    h5_add_aggregated_pr(h5f, aggXYArr)    
-    return aggXYArr
-
-def h5_iou_aggregator(h5f, iouThr):
-    """ Aggregate over all IOU_ACTIVITY_*.h5 files in output_dir.
-
-    :param H5File h5f: File handle
-    :param float iouThr: IoU Threshold to find in the H5F archive. IoU entry must exist !    
-    """
-    # [ [x[],y[]], ..., [x[],y[]] ]
-    activitiesG = h5f['activity']
-    dlist = []
-    for aName in activitiesG.keys():
-        activityG = activitiesG[aName]
-        if 'iou' in activityG.keys():
-            gG = activityG['iou']
-            if iouThr in gG.keys():
-                iouG = gG[iouThr]
-                dlist.append(np.array([ iouG['prt/recall'][()], iouG['prt/precision'][()] ]))
-    if len(dlist):    
-        aggXYArr = aggregate_xy(dlist)
-        h5_add_aggregated_iou_pr(h5f, iouThr, aggXYArr)        
-    return None      
-
-def _sumup_ac_system_level_scores(metrics, pr_scores):
+def ac_system_level_score(metrics, pr_scores):
     """ Map internal to public representation. """
     co = []
-    if 'map' in metrics:     co.append(['mAP',     round(np.mean(pr_scores.ap), 3)]) # pinterp + AP
-    if 'map_11' in metrics:  co.append(['mAP_11' , round(np.mean(pr_scores.ap_11), 3)])
-    if 'map_101' in metrics: co.append(['mAP_101', round(np.mean(pr_scores.ap_101), 3)])
-    if 'map_auc' in metrics: co.append(['mAP_auc', round(np.mean(pr_scores.ap_auc), 3)])
-    if 'map_avg' in metrics: co.append(['mAP_avg', round(np.mean(pr_scores.ap_interp), 3)])
+    if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 3)])
+    if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 3)])
     return co
 
-def _sumup_ac_activity_level_scores(metrics, pr_scores):
+def ac_activity_level_scores(metrics, pr_scores):
     """ Map internal to public representation. """
     act = {}
     for index, row in pr_scores.iterrows():
         co = {}
-        if 'map' in metrics:     co['ap'] =      round(row['ap'], 3)
-        if 'map_11' in metrics:  co['ap_11'] =   round(row['ap_11'], 3)
-        if 'map_101' in metrics: co['ap_101'] =  round(row['ap_101'], 3)
-        if 'map_auc' in metrics: co['ap_auc'] =  round(row['ap_auc'], 3)
-        if 'map_avg' in metrics: co['ap_avg'] =  round(row['ap_interp'], 3)
+        if 'map'        in metrics:        co['ap'] = round(row['ap'], 3)
+        if 'map_interp' in metrics: co['ap_interp'] = round(row['ap_interp'], 3)
         act[row['activity_id']] = co
     return act
 
@@ -317,11 +164,8 @@ def _sumup_tad_system_level_scores(metrics, pr_iou_scores, iou_thresholds):
     for iout in iou_thresholds:
         pr_scores = pr_iou_scores[iout]
         co = {}
-        if 'map'         in metrics: co['mAP'] = round(np.mean(pr_scores.ap), 3) # sklearn weighted AP method
-        if 'map_11'      in metrics: co['mAP_11'] = round(np.mean(pr_scores.ap_11), 3)
-        if 'map_101'     in metrics: co['mAP_101'] = round(np.mean(pr_scores.ap_101), 3)
-        if 'map_auc'     in metrics: co['mAP_auc'] = round(np.mean(pr_scores.ap_auc), 3)
-        if 'map_thr'     in metrics: co['mAP_thr'] = round(np.mean(pr_scores.ap_thr), 3)        
+        if 'map'         in metrics: co['mAP']        = round(np.mean(pr_scores.ap), 3)
+        if 'map_interp'  in metrics: co['mAP_interp'] = round(np.mean(pr_scores.ap_interp), 3)
         ciou[iout] = co
     return ciou
         
@@ -333,13 +177,80 @@ def _sumup_tad_activity_level_scores(metrics, pr_iou_scores, iou_thresholds):
         prs = pr_iou_scores[iout]        
         for index, row in prs.iterrows():            
             co = {}
-            if 'map'     in metrics: co[    "ap"] = round(row['ap'], 3) # sklearn weighted AP
-            if 'map_11'  in metrics: co[ "ap_11"] = round(row['ap_11'], 3)
-            if 'map_101' in metrics: co["ap_101"] = round(row['ap_101'], 3)
-            if 'map_auc' in metrics: co["ap_auc"] = round(row['ap_auc'], 3)
-            if 'map_thr' in metrics: co["ap_thr"] = round(row['ap_interp'], 3)
+            if 'map'         in metrics: co[        "ap"] = round(row['ap'], 3)
+            if 'map_interp'  in metrics: co[ "ap_interp"] = round(row['ap_interp'], 3)
             activity = row['activity_id']
             if activity not in act.keys():
                 act[activity] = {}
             act[activity][iout] = co
     return act
+
+def cm_binary(refl_df, hypl_df, activity):
+    tp,fp,fn = 0,0,0
+    refl = refl_df.to_numpy()
+    hypl = hypl_df.to_numpy()    
+    if len(refl) > 0:
+        if len(refl) != len(hypl):
+            raise "ref activity len != hyp activity len"
+        for i in range(0, len(refl)):
+            if (refl[i] == activity):
+                if (hypl[i] == activity):
+                    tp += 1
+                else:
+                    fp += 1
+            else:
+                if (hypl[i] == activity):
+                    fn += 1
+    return tp,fp,fn
+
+# For aP computation not graph
+def rectify_pr_curves(results):
+    return results.apply(_rectify_pr_curve, axis=1)
+
+def compute_aps(results):    
+    results = results.apply(_compute_ap, axis=1)    
+    return results    
+
+#def _rectify_pr_curve(row, at_start=True, at_end=True):
+def _rectify_pr_curve(row, at_start=False, at_end=False):
+    prec,recl = row.precision.copy(), row.recall.copy()
+    if not np.array(row.precision).any():
+            prec, recl = [0.0,0.0], [0.0, 1.0]
+    else:
+        # When all thresholds are mapped to the same point in P/R space
+        if (np.sum(np.diff(prec)) == 0) & (np.sum(np.diff(recl)) == 0):
+            recl[0] = 0.0            
+            recl[-1] = 1.0
+
+        # When there is MD's @end or no support at start but recall points are missing at 1 or 0
+        if (recl[0] != 0.0):
+            recl.insert(0, 0.0)
+            prec.insert(0, row.precision[0])
+        if (recl[-1] != 1.0):
+            recl.append(1.0)
+            prec.append(row.precision[-1])            
+            
+        # - account for missing start-value of p/r curve
+        if at_start & (recl[0] != 1.0):
+            recl.insert(0, 1.0)
+            prec.append(row.precision[-1])
+            prec.insert(0, 1.0)
+            #prec.insert(0, row.recall[1])
+        # - account for missing end-value of p/r curve
+        if at_end & (recl[-1] != 1.0):
+            recl.append(1.0)
+            prec.append(row.precision[-1])
+    row.precision = prec
+    row.recall = recl
+    return row
+
+def _compute_ap(row):
+    p, r = row.precision, row.recall
+    # Compute pinterp step-function using max. Needs to be run backwards due to
+    # properties of precision.
+    pinterp = np.maximum.accumulate(p[::-1])
+    # K-point interpolation (over all thresholds) 
+    row['ap'] = np.trapz(p, r)
+    # This will be highly optimistic
+    row['ap_interp'] = np.sum(np.diff(r[::]) * pinterp[::-1][:-1])
+    return row

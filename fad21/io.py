@@ -167,7 +167,7 @@ def h5_add_activity_prt(h5f, pr_data):
         prtG = h5_type_fetch(activitySubG, 'prt', "MKey")
         prtG.create_dataset("recall", data=row['recall'][::-1])
         prtG.create_dataset("precision", data=row['precision'][::-1])
-        prtG.create_dataset("thresholds", data=row['thresholds'])        
+        #prtG.create_dataset("thresholds", data=row['thresholds'])        
 
 def h5_add_activity_scores(h5f, results):
     actG = h5_type_fetch(h5f, 'activity', "LKey")

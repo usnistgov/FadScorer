@@ -248,7 +248,7 @@ def test_2ref_50_uniform_confidence(tmpdir):
     assert(len(hData) == 2)
     # resulting aP == P/R values here
     assert(hData['person_twirls'] == pytest.approx(0.0, 0.1))
-    assert(hData['person_rubs_eyes'] == pytest.approx(0.5, 0.01))    
+    assert(hData['person_rubs_eyes'] == pytest.approx(0.5, 0.01))
 
 
     

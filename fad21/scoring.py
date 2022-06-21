@@ -13,47 +13,49 @@ from .io import *
 from .filters import *
 from .validation import detect_out_of_scope_hyp_video_id
 from .metrics import *
-from .metrics import _sumup_ac_system_level_scores, _sumup_ac_activity_level_scores, _sumup_tad_activity_level_scores, _sumup_tad_system_level_scores
+from .metrics import ac_system_level_score, ac_activity_level_scores, _sumup_tad_activity_level_scores, _sumup_tad_system_level_scores
 
 log = logging.getLogger(__name__)
 
 def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"):
-    """ Score System output (hypothesis) of Activity Classification Task (AC)
+    """ Score System output (hypothesis) of Activity Classification Task (AC) incl.
+    - non/missed classification
     
-    :param fad21.Dataset ds:          Dataset Object w/ REF + HYP
-    :param list[str] metrics:     Array of metrics to include
-    :param int topk:        Subselect topk matches
-    :param str output_dir:  Path to a directory (created on demand) for output files    
+    :param fad21.Dataset ds  : Dataset Object w/ REF + HYP
+    :param list[str] metrics : Array of metrics to include ['map', 'map_interp']
+    :param int filter_top_n  : Subselect by top confidence scores before scoring
+    :param str output_dir    : Path to a directory (created on demand) for output files
     :returns tuple: __pr_scores__, __results__, __al_results__
     
     > - pr_scores: multi-class pr for all activities
-    - results     metrics for system level
-    - al_results  metrics for activity level
+    > - results     metrics for system level
+    > - al_results  metrics for activity level
     """
-    # Just a safety check in case this is called from somewhere else than main.
+    # Safety check in case this is called from somewhere else than main.
     detect_out_of_scope_hyp_video_id(ds)
 
-    # Sequence matters here !
-
-    # Fix out of scope and  NA's
+    # Fix out of scope and NA's
     remove_out_of_scope_activities(ds)
+
     # Subselect by confidence scores
     ds.hyp = filter_by_top_k_confidence(ds.hyp,filter_top_n)
-    # Fix missing entries (adds __missed_detection__ label)
-    append_missing_video_id(ds)
-    # Rectify 
-    prep_ac_data(ds)
-    data = ds.register
     
-    #cm, labels, pr_stats = score_pr(data)
-    if len(data) > 0:
-        pr_scores = compute_precision_score(data)
+    # Rectify data and set register
+    prep_ac_data(ds)
+
+    # Handle empty files/content
+    if len(ds.register) > 0:
+        pr_scores = compute_multiclass_pr(ds.register)
     else:
         pr_scores = generate_zero_scores(ds.register)
+    
+    # Fix start/end points
+    pr_scores  = rectify_pr_curves(pr_scores)
+    pr_scores  = compute_aps(pr_scores)
 
-    results = _sumup_ac_system_level_scores(metrics, pr_scores)
-    al_results = _sumup_ac_activity_level_scores(metrics, pr_scores)
-
+    results    = ac_system_level_score(metrics, pr_scores)
+    al_results = ac_activity_level_scores(metrics, pr_scores)
+    
     # Writeout if not running from a notebook/not output specified
     if (output_dir != None):
         fn = os.path.join(output_dir, "scoring_results.h5")
@@ -66,7 +68,7 @@ def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"
         h5_aggregator(h5f)
         h5f.close()
 
-    return pr_scores, results, al_results
+    return pr_scores, results, al_results    
   
 def score_tad(ds, metrics=['map'], iou_thresholds=[0.5], output_dir=None, argstr = "{}"):    
     """ Score System output (hypothesis) of Temporal Activity Detection Task (TAD)

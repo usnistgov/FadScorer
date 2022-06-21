@@ -21,11 +21,14 @@ def plot_prs(h5f, root_path, title, output_fn):
         ylim=(0, max(1.0, max(y+y_err))), yticks=np.arange(0, 1, 0.1))
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
-    ax.set_title(title)        
+    ax.set_title(title)
+    log.debug("Saving plot {}".format(output_fn))        
     plt.savefig(output_fn)
+    plt.close()
 
 def gen_sub_prs_plot(h5f, root_path, iou, fig, ax, prefix=None):
     log.debug(root_path)
+    largs = {} # {"drawstyle": "steps-post"}
     precDS = h5f["{}/prs/precision".format(root_path)]
     recallDS = h5f["{}/prs/recall".format(root_path)]
     stderrDS = h5f["{}/prs/stderror".format(root_path)]
@@ -33,7 +36,7 @@ def gen_sub_prs_plot(h5f, root_path, iou, fig, ax, prefix=None):
     y = precDS[()]
     y_err = stderrDS[()]        
     label = ('%s (%s)' % (prefix, iou)) if prefix is not None else str(iou)
-    ax.plot(x, y, linewidth=1.0, label=label)
+    ax.plot(x, y, linewidth=1.0, label=label, **largs)
     ax.fill_between(x, y - y_err, y + y_err, alpha=0.05)    
     ax.set(xlim=(0, 1), xticks=np.arange(0, 1, 0.1),
            ylim=(0, 1), yticks=np.arange(0, 1, 0.1))
@@ -45,20 +48,23 @@ def plot_all_activity_pr(h5f, output_dir):
 
 def plot_pr(h5f, root_path, output_fn):
     """ Plot Precision / Recall Curves """
+    largs = {} #{"drawstyle": "steps-post"}
     plt.style.use('_mpl-gallery')
     precDS = h5f["{}/prt/precision".format(root_path)]
     recallDS = h5f["{}/prt/recall".format(root_path)]    
     x = recallDS[()]
     y = precDS[()]
     fig, ax = plt.subplots(figsize=(12,10), constrained_layout=True)    
-    ax.plot(x, y, linewidth=1.0)
+    ax.plot(x, y, linewidth=1.0, **largs)
     
     ax.set(xlim=(0, 1), xticks=np.arange(0, 1, 0.1),
            ylim=(0, 1), yticks=np.arange(0, 1, 0.1))    
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
     ax.set_title(root_path)
-    plt.savefig(output_fn)    
+    log.debug("Saving plot {}".format(output_fn))        
+    plt.savefig(output_fn)
+    plt.close()
 
 def plot_ac(h5f, output_dir):    
     title = "Mean Precision Recall"

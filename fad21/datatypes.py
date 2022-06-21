@@ -35,11 +35,13 @@ class Dataset(object):
         Data Spec:
             # index_df      = { video_file_id, tbd } // NOT IN USE
             
-            ground_truth = { video_file_id, start_frame, end_frame,                    activity_id, instance_id }
-            prediction   = { video_file_id, start_frame, end_frame, processing_status, activity_id, confidence_score }        
-            register     = { video_file_id, activity_id_hyp, activtiy_id_ref, ground_truth, confidence_score }
-            activity_ids = List of activity-ids to use (default: unique(GT.activity_id))
-            video_ids    = List of video-ids to use (default: unique(GT.video_file_id))
+            reference    = { video_file_id, start_frame, end_frame,                    activity_id, instance_id }
+            hypothesis   = { video_file_id, start_frame, end_frame, processing_status, activity_id, confidence_score }        
+            register     = { video_file_id, activity_id_hyp, activtiy_id_ref, confidence_score }
+
+            # Advanced Usage
+            activity_ids = List of activity-ids to use (default: unique(REF.activity_id))
+            video_ids    = List of video-ids to use (default: unique(REF.video_file_id))
     """    
     def __init__(self, gt=None, pred=None, register=None):
         self.ref = gt
@@ -52,20 +54,20 @@ class Dataset(object):
         self.video_ids = self.ref['video_file_id'].unique()
 
     def __repr__(self):
-        gt_str = "GT(None)"
-        pred_str = "PRED(None)"
+        gt_str = "REF(None)"
+        pred_str = "HYP(None)"
         register_str = "REGISTER(None)"
 
         if (self.ref is not None):
-            gt_str = "GT({}|{})".format(
+            gt_str = "REF({}|{})".format(
                 len(self.ref), len(self.ref['activity_id'].unique()))
         
         if (self.hyp is not None):
-            pred_str = "PRED({}|{})".format(                
+            pred_str = "HYP({}|{})".format(                
                 len(self.hyp), len(self.hyp['activity_id'].unique()))                
 
         if (self.register is not None):
-            register_str = "REGISTER({}| pred {}, gt {})".format(
+            register_str = "REGISTER({}| hyp {}, ref {})".format(
                 len(self.register), len(self.register['activity_id_pred'].unique()), len(self.register['activity_id_gt'].unique()))
 
         return "[dataset] (#|ActivityID):  {}, {}, {}".format(gt_str, pred_str, register_str)

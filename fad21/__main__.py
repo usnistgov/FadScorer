@@ -143,7 +143,7 @@ def main(args=None):
     parser_score_ac.add_argument("-f", '--video_list_file', type=str, required=False, help="Used to filter files from scoring (REF + HYP)")
     parser_score_ac.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
     # TODO: move/add top-1 and top-5 metrics to metrics array
-    parser_score_ac.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
+    parser_score_ac.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_interp")
     parser_score_ac.add_argument("-t", "--filter_top_n", nargs='?', default="0", help="Use only top-n confidence system results (0=all)")
     parser_score_ac.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
     parser_score_ac.add_argument("-c", "--no_clamp", action="store_true", help="Do not clamp p(0) to 1, compute instead (default: off)")

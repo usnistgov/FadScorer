@@ -9,6 +9,7 @@ notebooks/.ipynb**
 *.csv
 *.dm
 .DS_Store
+tests/.swp**
 tests/.DS_Store
 tests/__pycache__/**
-tests/.swp**
+tests/.pytest_cache/**

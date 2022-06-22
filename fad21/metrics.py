@@ -26,61 +26,73 @@ def generate_zero_scores(labels):
     return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'precision', 'recall'])
 
 def compute_multiclass_pr(data):    
-    labels = data.activity_id_ref.unique()
+    activities = data.activity_id_ref.unique()
 
-    # linspace values have numerical errors..
-    #trange = np.linspace(1, 0, num=101, retstep=True)[0]
-    trange = np.array([1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0])
+    # Don't do this, as it will always gloss over threshold details potentially
+    # mapping them onto a single point in P/R space. This can result in a high
+    # loss of detail in extreme cases where there is lots of support points
+    # within the thershold interval:
+    # trange = np.linspace(1, 0, num=101, retstep=True)[0]
+    # trange = np.array([1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0])
+    #
+    # To create a smaller threshold range in case of an excessive amount of thresholds, 
+    # and preserve more detail it is better to reduce using available thresholds.
+
     y = []    
     
-    # Iterate over all activity-id isolating them into a binary DET case
-    for act in labels:
-        # Include only relevant TP/FP/FN
+    # Iterate over all activity-id isolating them into a binary detection
+    for act in activities:
+        # Include only relevant TP/FP (all relevant retrievals)
         subsel = (data.activity_id_ref == act)
-
-        #subdata = data.loc[(data.activity_id_hyp == act) | (data.activity_id_ref == act)]
         subdata = data.loc[subsel]        
-        
-        # pdb.set_trace()
+                
         # Count and drop missed detections
         mlen = len(subdata.loc[subdata.activity_id_hyp == '0'])
-        subdata = subdata.drop(subdata[subdata.activity_id_hyp == '0'].index)        
-        trange = np.sort(subdata['confidence_score'].unique())
-        if trange[0] != 0.0:
-            trange = np.append(0.0, trange)
-        if trange[-1] != 1.0:
-            trange = np.append(trange, 1.0)
-        # Reverse the range to be always running from high thr to low thr to
-        # preserve order of p/r. This is needed to handle edgecases w/ 1 or 2
-        # degenerate points.
-        trange = trange[::-1]
-        #pdb.set_trace()
-        # Compute amount of missed detections for overall count
-        
-        alabels = [act, '0']        
-        precision,recall = [],[]        
+        subdata = subdata.drop(subdata[subdata.activity_id_hyp == '0'].index)
 
-        # Iterate over thresholds computing p/r for each CM
-        for thr in trange:        
-            tdata = subdata[(subdata.confidence_score >= thr)]         
-            tp, fp, fn = cm_binary(tdata.activity_id_ref, tdata.activity_id_hyp, act)
-            # all retrievals above threshold
-            fp += fn             
-            # retrievals below threshold + md as they are always excluded above
-            fn = len(subdata) - len(tdata) + mlen 
-            # counting missed detections in
-            # if (mlen > 0) & (thr == 0): fp += mlen                         
-            
-            prec = tp/(tp+fp) if (tp+fp >0) else 0.0            
-            # account for MD's: clamp to 0
-            if (mlen > 0) & (thr == 0): prec = 0
-            recl = tp/(tp+fn) if (tp+fn >0) else 0.0
-            
-            # Force precision of 1 @ recall of 0            
-            #print("act {}, thr {}, tp {}, fp {}, fn {}, p/r {}/{}, lent {}, ldata {}, mdata {}".format(
-            #   act, thr, tp, fp, fn, prec, recl, len(tdata), len(subdata), mlen))            
-            precision.append(prec)
-            recall.append(recl)
+        # There is at least 1 datapoint + MD
+        if len(subdata) > 0:
+            # Use all thresholds available.
+            trange = np.sort(subdata['confidence_score'].unique())
+
+            if trange[0] != 0.0:
+                trange = np.append(0.0, trange)
+            if trange[-1] != 1.0:
+                trange = np.append(trange, 1.0)
+
+            # Reverse the range to be always running from high thr to low thr to
+            # preserve order of p/r. This is needed to handle edgecases w/ 1 or 2
+            # degenerate points.
+            trange = trange[::-1]            
+            alabels = [act, '0']        
+            precision,recall = [],[]        
+
+            # computing p/r for each threshold
+            for thr in trange:        
+                tdata = subdata[(subdata.confidence_score >= thr)]         
+                tp, fp, fn = cm_binary(tdata.activity_id_ref, tdata.activity_id_hyp, act)
+                # all retrievals above threshold
+                fp += fn             
+                # retrievals below threshold + md as they are always excluded above
+                fn = len(subdata) - len(tdata) + mlen
+                
+                # counting missed detections in
+                # if (mlen > 0) & (thr == 0): fp += mlen                                     
+                prec = tp/(tp+fp) if (tp+fp >0) else 0.0            
+                
+                # account for MD's: clamp to 0 for correct aP computation
+                if (mlen > 0) & (thr == 0): prec = 0
+                recl = tp/(tp+fn) if (tp+fn >0) else 0.0
+                    
+                #print("act {}, thr {}, tp {}, fp {}, fn {}, p/r {}/{}, lent {}, ldata {}, mdata {}".format(
+                #   act, thr, tp, fp, fn, prec, recl, len(tdata), len(subdata), mlen))            
+                precision.append(prec)
+                recall.append(recl)
+        # One MD, No datapoints.
+        else:
+            precision = [0.0, 0.0]
+            recall = [0.0, 1.0]
+            trange = []
 
         # Build output
         y.append([ act, precision, recall, trange ])
@@ -125,10 +137,13 @@ def compute_temp_iou(gstart, gend, pstart, pend):
     return round(iou,3)
 
 def compute_pr_scores_at_iou(mpred, iou_threshold):
-    """ Given dataframe of predictions compute P/R Metrics using #compute_precision_score at a specific IoU threshold.
+    """ Given dataframe of predictions compute P/R Metrics using
+    'compute_precision_score' at a specific IoU threshold.
 
     :param dataframe mpred: scoring-ready hypothesis data.
-    :param float iou_threshold: Intersection Over Union threshold used to subset `mpred` for scoring.
+    :param float iou_threshold: Intersection Over Union threshold used to subset
+        `mpred` for scoring.
+        
     :returns dataframe: See output of #compute_precision_score
     """
     if len(mpred) > 0:
@@ -139,13 +154,11 @@ def compute_pr_scores_at_iou(mpred, iou_threshold):
     else:
         return generate_zero_scores(['zero_score'])
 
-     
-
 def ac_system_level_score(metrics, pr_scores):
     """ Map internal to public representation. """
     co = []
-    if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 3)])
-    if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 3)])
+    if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 4)])
+    if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 4)])
     return co
 
 def ac_activity_level_scores(metrics, pr_scores):
@@ -153,8 +166,8 @@ def ac_activity_level_scores(metrics, pr_scores):
     act = {}
     for index, row in pr_scores.iterrows():
         co = {}
-        if 'map'        in metrics:        co['ap'] = round(row['ap'], 3)
-        if 'map_interp' in metrics: co['ap_interp'] = round(row['ap_interp'], 3)
+        if 'map'        in metrics:        co['ap'] = round(row['ap'], 4)
+        if 'map_interp' in metrics: co['ap_interp'] = round(row['ap_interp'], 4)
         act[row['activity_id']] = co
     return act
 
@@ -221,25 +234,14 @@ def _rectify_pr_curve(row, at_start=False, at_end=False):
         if (np.sum(np.diff(prec)) == 0) & (np.sum(np.diff(recl)) == 0):
             recl[0] = 0.0            
             recl[-1] = 1.0
-
-        # When there is MD's @end or no support at start but recall points are missing at 1 or 0
+        # When there is MD's @end or no support at start and recall points are
+        # missing at 1 or 0.
         if (recl[0] != 0.0):
             recl.insert(0, 0.0)
             prec.insert(0, row.precision[0])
         if (recl[-1] != 1.0):
             recl.append(1.0)
             prec.append(row.precision[-1])            
-            
-        # - account for missing start-value of p/r curve
-        if at_start & (recl[0] != 1.0):
-            recl.insert(0, 1.0)
-            prec.append(row.precision[-1])
-            prec.insert(0, 1.0)
-            #prec.insert(0, row.recall[1])
-        # - account for missing end-value of p/r curve
-        if at_end & (recl[-1] != 1.0):
-            recl.append(1.0)
-            prec.append(row.precision[-1])
     row.precision = prec
     row.recall = recl
     return row

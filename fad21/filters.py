@@ -23,6 +23,8 @@ def prep_ac_data(ds):
     
     # Subset hypdata only for matching activities with reference.activity_id
     prednum = len(ds.hyp.activity_id.unique())    
+   
+
     # Remove out of bound activities (this should be catched before by validation step)
     fhyp = ds.hyp[ds.hyp.activity_id.isin(ds.activity_ids)]    
     log.info("[xform] {} matching activities (refXhyp) out of {} activities in hypothesis.".
@@ -70,6 +72,8 @@ def remove_out_of_scope_activities(ds):
     - Modifies ds.hyp
     """    
     ds.hyp.drop(ds.hyp[~ds.hyp.activity_id.isin(ds.ref.activity_id.unique())].index, inplace = True)
+    # Usecase: video_id,,,
+    ds.hyp.drop(ds.hyp[ds.hyp.activity_id.isna()].index, inplace = True)
 
 def append_missing_video_id(ds):
     """ 
@@ -251,37 +255,3 @@ def compute_alignment_matrix(pRef, pHyp, activity):
             
     #return [pRef, pHyp, iMat, cVec, rVec ]
     return [iMat, cVec, rVec, iVec]
-
-def aggregate_xy(xy_list, method="average", average_resolution=10):
-    """ Aggregate multiple xy arrays producing an y average incl. std-error.
-        
-    :param list xy_list: list of `[x,y]` arrays (x MUST be monotonically increasing !)
-    :param str method: only 'average' method supported
-    :param int average_resolution: number of interpolation points
-    :returns list: Interpolated arrays of __precision__, __recall__, __stderr__.
-    """
-    #pdb.set_trace()
-    if xy_list:
-        # Filtering data with missing value
-        is_valid = lambda dc: dc[0].size != 0 and dc[1].size != 0 and np.all(~np.isnan(dc[0])) and np.all(~np.isnan(dc[1]))        
-        xy_list_filtered = [dc for dc in xy_list if is_valid(dc)]
-        if xy_list_filtered:
-            # Longest x axis
-            max_fa_list = [max(dc[0]) for dc in xy_list_filtered]
-            max_fa = max(max_fa_list)
-            if method == "average":
-                x = np.linspace(0, max_fa, average_resolution)
-                ys = np.vstack([np.interp(x, data[0], data[1]) for data in xy_list_filtered])                
-                stds = np.std(ys, axis=0, ddof=0)
-                n = len(ys)
-                stds = stds / math.sqrt(n)
-                stds = 1.96 * stds
-                # (0,1) (minpfa, 1)
-                ys = [np.interp(x,
-                                np.concatenate((np.array([0, data[0].min()]), data[0])),
-                                np.concatenate((np.array([1, 1]),             data[1])))
-                                for data in xy_list_filtered]
-                aggregated_dc = [ x, (np.vstack(ys).sum(0) + len(xy_list) - len(xy_list_filtered)) / len(xy_list), stds ]
-                return aggregated_dc
-    log.error("Warning: No data remained after filtering, returning an empty array list")
-    return [ [], [], [] ]

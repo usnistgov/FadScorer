@@ -14,8 +14,6 @@ class ValidationError(Exception):
     """Class for error reporting."""
     pass
 
-
-
 def validate_gt(ds):
     """
     Validate Ground Truth Dataframe
@@ -87,7 +85,7 @@ def validate_pred(ds):
     #    log.debug(pred_vid_in_gt[~pred_vid_in_gt.activity_id.isin(ds.ref.activity_id)].activity_id)
     matching_pred = pred_vid_in_gt[pred_vid_in_gt.activity_id.isin(ds.ref.activity_id.unique())]
     if len(matching_pred) != len(pred_vid_in_gt):
-        log.warning("{} entries will be dropped due to mismatched activites.".format(len(pred_vid_in_gt) - len(matching_pred)))
+        log.warning("{} entries will be marked as missed !".format(len(pred_vid_in_gt) - len(matching_pred)))
     #    raise ValidationError("System output contains unknown activity_id. {} mismatched activities found."
     #        .format(len(pred_vid_in_gt) - len(matching_pred)))
 

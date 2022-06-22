@@ -67,7 +67,7 @@ def h5_aggregator(h5f):
     dlist = []
     for aName in activitiesG.keys():
         activityG = activitiesG[aName]        
-        dlist.append(np.array([ activityG['prt/recall'][()], activityG['prt/precision'][()] ]))
+        dlist.append(np.array([ activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1] ]))    
     aggXYArr = aggregate_xy(dlist)    
     h5_add_aggregated_pr(h5f, aggXYArr)    
     return aggXYArr

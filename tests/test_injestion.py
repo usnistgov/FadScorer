@@ -3,11 +3,11 @@ import pytest
 from fad21.io import load_ref, load_hyp
 
 def load_tiny():
-    return fad21.load_ref("testdata/ac_ref_2x3.csv")
+    return fad21.load_ref("testdata/ref_ec_1.csv")
 
 def test_load_1():
     df = load_tiny()
-    assert len(df) == 6
+    assert len(df) == 310
 
 
 def test_faulty_header():

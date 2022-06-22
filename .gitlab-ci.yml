@@ -15,7 +15,7 @@ tests:
     - python --version
     - python -m pip install -e .
     - cd $CI_PROJECT_DIR/tests
-    - python -m pytest
+    - python tests.py
   tags:
     - mig-runner
 

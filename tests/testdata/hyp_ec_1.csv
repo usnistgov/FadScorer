@@ -1,10 +1,12 @@
 #video_file_id,activity_id,confidence_score
-# This output has four usecases
+#
+# This system-output has four usecases:
 # 
-# - 50_p_missing:       100 vid, 1 class, 50% missing, rest retrieved at 1.0 confidence
-# - 50_p_missing_noise: 100 vid, 1 class, 50% missing, rest retrieved at 0.990n confidence (n := random [0..9])
-# - 50_p_correct      : 100 vid, 1 class, 50% retrieved, 50% not-retrieved (class B) at 1.0 confidence
-# - 10 vid, 1 class, 100% retrieved (class B), at 1.0 confidence
+# - 50_p_missing:      : 100 vid, 1 class, 50% missing, rest retrieved at 1.0 confidence
+# - 50_p_missing_noise : 100 vid, 1 class, 50% missing, rest retrieved at 0.990n confidence (n := random [0..9])
+# - 50_p_correct       : 100 vid, 1 class, 50% retrieved, 50% not-retrieved (class B) at 1.0 confidence
+# - 100_p_correct      : 10 vid, 1 class, 100% retrieved (class B), at 1.0 confidence
+#
 0,50_p_missing,1.0
 1,50_p_missing,1.0
 2,50_p_missing,1.0

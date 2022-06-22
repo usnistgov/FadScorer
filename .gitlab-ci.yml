@@ -14,7 +14,7 @@ tests:
     - echo $CI_COMMIT_BRANCH
     - python --version
     - python -m pip install -e .
-    - cd $CI_PROJECT_DIR/tests
+    - cd $CI_PROJECT_DIR
     - python tests.py
   tags:
     - mig-runner

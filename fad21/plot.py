@@ -22,7 +22,7 @@ def plot_prs(h5f, root_path, title, output_fn):
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
     ax.set_title(title)
-    log.debug("Saving plot {}".format(output_fn))        
+    log.info("Saving plot {}".format(output_fn))        
     plt.savefig(output_fn)
     plt.close()
 
@@ -62,7 +62,7 @@ def plot_pr(h5f, root_path, output_fn):
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
     ax.set_title(root_path)
-    log.debug("Saving plot {}".format(output_fn))        
+    log.info("Saving plot {}".format(output_fn))        
     plt.savefig(output_fn)
     plt.close()
 

@@ -43,10 +43,9 @@ class Dataset(object):
             activity_ids = List of activity-ids to use (default: unique(REF.activity_id))
             video_ids    = List of video-ids to use (default: unique(REF.video_file_id))
     """    
-    def __init__(self, gt=None, pred=None, register=None):
-        self.ref = gt
-        self.hyp = pred
-        self.register = register
+    def __init__(self, ref=None, hyp=None, register=None):
+        self.ref, self.hyp, self.register = ref, hyp, register
+
         # Default to use all activity Id. 
         if 'activity_id' in self.ref:
             self.activity_ids = self.ref['activity_id'].unique()
@@ -54,20 +53,24 @@ class Dataset(object):
         self.video_ids = self.ref['video_file_id'].unique()
 
     def __repr__(self):
-        gt_str = "REF(None)"
-        pred_str = "HYP(None)"
+        ref_str = "REF(None)"
+        hyp_str = "HYP(None)"
         register_str = "REGISTER(None)"
 
         if (self.ref is not None):
-            gt_str = "REF({}|{})".format(
+            ref_str = "REF({}|{})".format(
                 len(self.ref), len(self.ref['activity_id'].unique()))
         
         if (self.hyp is not None):
-            pred_str = "HYP({}|{})".format(                
+            hyp_str = "HYP({}|{})".format(                
                 len(self.hyp), len(self.hyp['activity_id'].unique()))                
 
         if (self.register is not None):
+            hacts = self.register['activity_id_hyp'].unique()
+            # don't show MD extra '0' activity
+            hlen = len(hacts)-1 if '0' in hacts else len(hacts)
             register_str = "REGISTER({}| hyp {}, ref {})".format(
-                len(self.register), len(self.register['activity_id_pred'].unique()), len(self.register['activity_id_gt'].unique()))
+                len(self.register), hlen,
+                len(self.register['activity_id_ref'].unique()))
 
-        return "[dataset] (#|ActivityID):  {}, {}, {}".format(gt_str, pred_str, register_str)
+        return "[dataset] (#|ActivityID):  {}, {}, {}".format(ref_str, hyp_str, register_str)

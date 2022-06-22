@@ -17,9 +17,10 @@ from .metrics import ac_system_level_score, ac_activity_level_scores, _sumup_tad
 
 log = logging.getLogger(__name__)
 
-def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"):
+def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}", no_clamp = False):
     """ Score System output (hypothesis) of Activity Classification Task (AC) incl.
-    - non/missed classification
+    - no activity labels
+    - missing video-id
     
     :param fad21.Dataset ds  : Dataset Object w/ REF + HYP
     :param list[str] metrics : Array of metrics to include ['map', 'map_interp']
@@ -45,7 +46,7 @@ def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"
 
     # Handle empty files/content
     if len(ds.register) > 0:
-        pr_scores = compute_multiclass_pr(ds.register)
+        pr_scores = compute_multiclass_pr(ds.register, no_clamp)
     else:
         pr_scores = generate_zero_scores(ds.register)
     

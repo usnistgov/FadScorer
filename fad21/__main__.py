@@ -56,7 +56,7 @@ def ac_scorer_cmd(args):
     log.debug(ds)    
     
     argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
-    score_ac(ds, args.metrics, int(args.filter_top_n), args.output_dir, argstr)
+    score_ac(ds, args.metrics, int(args.filter_top_n), args.output_dir, argstr, args.no_clamp)
 
     h5f = h5_open_archive(os.path.join(args.output_dir, 'scoring_results.h5'))
     data = h5_extract_system_scores(h5f)          
@@ -146,6 +146,7 @@ def main(args=None):
     parser_score_ac.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
     parser_score_ac.add_argument("-t", "--filter_top_n", nargs='?', default="0", help="Use only top-n confidence system results (0=all)")
     parser_score_ac.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
+    parser_score_ac.add_argument("-c", "--no_clamp", action="store_true", help="Do not clamp p(0) to 1, compute instead (default: off)")
     parser_score_ac.set_defaults(func = ac_scorer_cmd)
 
     parser_score_tad = subparsers.add_parser('score-tad', help='Score system activity-detection output against ground-truth.')

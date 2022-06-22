@@ -25,7 +25,7 @@ def generate_zero_scores(labels):
         y.append(['no_macthing_activity', 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0] ])
     return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'precision', 'recall'])
 
-def compute_multiclass_pr(data):    
+def compute_multiclass_pr(data, no_clamp = False):    
     activities = data.activity_id_ref.unique()
 
     # Don't do this, as it will always gloss over threshold details potentially
@@ -54,7 +54,6 @@ def compute_multiclass_pr(data):
         if len(subdata) > 0:
             # Use all thresholds available.
             trange = np.sort(subdata['confidence_score'].unique())
-
             if trange[0] != 0.0:
                 trange = np.append(0.0, trange)
             if trange[-1] != 1.0:
@@ -62,7 +61,7 @@ def compute_multiclass_pr(data):
 
             # Reverse the range to be always running from high thr to low thr to
             # preserve order of p/r. This is needed to handle edgecases w/ 1 or 2
-            # degenerate points.
+            # points.
             trange = trange[::-1]            
             alabels = [act, '0']        
             precision,recall = [],[]        
@@ -77,8 +76,13 @@ def compute_multiclass_pr(data):
                 fn = len(subdata) - len(tdata) + mlen
                 
                 # counting missed detections in
-                # if (mlen > 0) & (thr == 0): fp += mlen                                     
-                prec = tp/(tp+fp) if (tp+fp >0) else 0.0            
+                # if (mlen > 0) & (thr == 0): fp += mlen                
+
+                # Clamp to 1 (on by default)
+                if (no_clamp == False) & (thr == 1.0):
+                    prec = 1.0 if (tp+fp == 0) else tp/(tp+fp)
+                else:
+                    prec = tp/(tp+fp) if (tp+fp >0) else 0.0            
                 
                 # account for MD's: clamp to 0 for correct aP computation
                 if (mlen > 0) & (thr == 0): prec = 0

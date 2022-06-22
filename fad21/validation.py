@@ -80,15 +80,12 @@ def validate_pred(ds):
 
     # Create subset of vids from reference
     pred_vid_in_gt = ds.hyp[ds.hyp.video_file_id.isin(ds.ref.video_file_id.unique())]
+    
     # Check MD's where PRED:activity-id does do not exist in GT:activity_id
-    #if label_distance > 0:
-    #    log.debug(pred_vid_in_gt[~pred_vid_in_gt.activity_id.isin(ds.ref.activity_id)].activity_id)
     matching_pred = pred_vid_in_gt[pred_vid_in_gt.activity_id.isin(ds.ref.activity_id.unique())]
     if len(matching_pred) != len(pred_vid_in_gt):
         log.warning("{} entries will be marked as missed !".format(len(pred_vid_in_gt) - len(matching_pred)))
-    #    raise ValidationError("System output contains unknown activity_id. {} mismatched activities found."
-    #        .format(len(pred_vid_in_gt) - len(matching_pred)))
-
+    
 def validate_ac(ds):
     """ Top-Level AC Validation Method 
     :params DataSet ds: Dataset w/ ref and hyp data    

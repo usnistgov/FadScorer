@@ -7,7 +7,7 @@ from .aggregators import *
 import math
 import h5py
 
-def aggregate_xy(xy_list, method="average", average_resolution=10):
+def aggregate_xy(xy_list, method="average", average_resolution=500):
     """ Aggregate multiple xy arrays producing an y average incl. std-error.
         
     :param list xy_list: list of `[x,y]` arrays (x MUST be monotonically increasing !)

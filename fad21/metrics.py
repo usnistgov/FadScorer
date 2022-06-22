@@ -112,6 +112,10 @@ def compute_temp_iou(gstart, gend, pstart, pend):
     :return float: IoU Value
     :raises MetricsValidationError: if input parameters are out of range
     """
+
+    # Workaround for Gitlab-CI version
+    pd.isna = pd.isnull
+
     # Validate for edge cases
     if (gstart > gend) or (pstart > pend):
         raise MetricsValidationError("Start frame after End frame or End frame before Start frame ! FIX SYSTEM OUTPUT !")
@@ -125,6 +129,7 @@ def compute_temp_iou(gstart, gend, pstart, pend):
     # if pd.isna(pend):
     #     pend = 0;
 
+    
     s0 = min(gstart, pstart)    
     spoint = max(gstart-s0, pstart-s0) 
     epoint = min(gend-s0, pend-s0)    

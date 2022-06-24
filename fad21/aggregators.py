@@ -7,6 +7,23 @@ from .aggregators import *
 import math
 import h5py
 
+def ap_interp(prec, rec):
+    """Interpolated AP - Based on VOCdevkit from VOC 2011.
+    """
+    mprec, mrec, idx = ap_interp_pr(prec, rec)
+    ap = np.sum((mrec[idx] - mrec[idx - 1]) * mprec[idx])
+    return ap
+
+def ap_interp_pr(prec, rec):
+    """Return Interpolated P/R curve
+    """
+    mprec = np.hstack([[0], prec, [0]])
+    mrec = np.hstack([[0], rec, [1]])
+    for i in range(len(mprec) - 1)[::-1]:
+        mprec[i] = max(mprec[i], mprec[i + 1])
+    idx = np.where(mrec[1::] != mrec[0:-1])[0] + 1
+    return mprec, mrec, idx
+
 def aggregate_xy(xy_list, method="average", average_resolution=100):
     """ Aggregate multiple xy arrays producing an y average incl. std-error.
         
@@ -41,20 +58,20 @@ def aggregate_xy(xy_list, method="average", average_resolution=100):
     log.error("Warning: No data remained after filtering, returning an empty array list")
     return [ [], [], [] ]
 
-def aggregator(output_dir):
-    """ Aggregate over all `ACTIVITY_*.h5` __files__ in output_dir using #aggregate_xy 
-    :param str output_dir: Name of directory to look for h5-files.
-    """
-    files = get_activity_h5_files(output_dir)
-    log.debug("Files to be aggregated: {}".format(files))
-    f_list = [ h5py.File(f, 'r') for f in files ]    
-    # dc['/prt'].attrs['activity_id'] 
-    # [ [x[],y[]], ..., [x[],y[]] ]
-    dlist = [ np.array([ dc['/prt/recall'][()], dc['/prt/precision'][()] ]) for dc in f_list ]
-    aggregated_xy = aggregate_xy(dlist)
-    output_fn = "{}/AGG_PRT_activities.h5".format(output_dir)
-    write_aggregated_pr_as_hdf5(output_fn, aggregated_xy)    
-    return None
+# def aggregator(output_dir):
+#     """ Aggregate over all `ACTIVITY_*.h5` __files__ in output_dir using #aggregate_xy 
+#     :param str output_dir: Name of directory to look for h5-files.
+#     """
+#     files = get_activity_h5_files(output_dir)
+#     log.debug("Files to be aggregated: {}".format(files))
+#     f_list = [ h5py.File(f, 'r') for f in files ]    
+#     # dc['/prt'].attrs['activity_id'] 
+#     # [ [x[],y[]], ..., [x[],y[]] ]
+#     dlist = [ np.array([ dc['/prt/recall'][()], dc['/prt/precision'][()] ]) for dc in f_list ]
+#     aggregated_xy = aggregate_xy(dlist)
+#     output_fn = "{}/AGG_PRT_activities.h5".format(output_dir)
+#     write_aggregated_pr_as_hdf5(output_fn, aggregated_xy)    
+#     return None
 
 def h5_aggregator(h5f):
     """ Aggregate over all activites within a h5 AC archive using #aggregate_xy
@@ -66,11 +83,34 @@ def h5_aggregator(h5f):
     activitiesG = h5f['activity']
     dlist = []
     for aName in activitiesG.keys():
-        activityG = activitiesG[aName]        
-        dlist.append(np.array([ activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1] ]))    
+        activityG = activitiesG[aName]
+        prec, recl, idx = ap_interp_pr(activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1])        
+        #dlist.append(np.array([ activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1] ]))    
+        dlist.append(np.array([ recl, prec ]))
     aggXYArr = aggregate_xy(dlist)    
-    h5_add_aggregated_pr(h5f, aggXYArr)    
+    
     return aggXYArr
+
+def pr_curve_aggregator(h5f, interp=False):
+    """ Aggregate over all activites within a h5 AC archive using #aggregate_xy
+
+    Keep in mind that H5 Files have an access lock.    
+    :param H5File h5f: H5 File Handle.
+    :returns list: See output of #aggregate_xy
+    """     
+    # [ [x[],y[]], ..., [x[],y[]] ]
+    activitiesG = h5f['activity']
+    dlist = []
+    for aName in activitiesG.keys():
+        activityG = activitiesG[aName]
+        if interp:
+            prec, recl, idx = ap_interp_pr(activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1])        
+            dlist.append(np.array([ recl, prec ]))
+        else:
+            dlist.append(np.array([ activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1] ]))            
+    aggXYArr = aggregate_xy(dlist)
+    return aggXYArr
+    
 
 def h5_iou_aggregator(h5f, iouThr):
     """ Aggregate over all IOU_ACTIVITY_*.h5 files in output_dir.

@@ -176,16 +176,19 @@ def h5_add_activity_scores(h5f, results):
         for metric, value in values.items():            
             activitySubG.create_dataset(metric, data=value)
 
-def h5_sub_add_aggregated_pr(graphsG, aggregated_xy):
-    prG = h5_type_fetch(graphsG, 'prs', "MKey")
+def h5_sub_add_aggregated_pr(graphsG, aggregated_xy, interp=False):
+    if interp:
+        prG = h5_type_fetch(graphsG, 'prs_interp', "MKey")
+    else:
+        prG = h5_type_fetch(graphsG, 'prs', "MKey")
     prG.create_dataset('precision', data=aggregated_xy[1])
     prG.create_dataset('recall', data=aggregated_xy[0])
     prG.create_dataset('stderror', data=aggregated_xy[2])                
 
-def h5_add_aggregated_pr(h5f, aggregated_xy):
+def h5_add_aggregated_pr(h5f, aggregated_xy, interp=False):
     log.debug("Writing aggregated XY PR-curves")
     graphsG = h5_type_fetch(h5f, 'system', "LKey")
-    h5_sub_add_aggregated_pr(graphsG, aggregated_xy)
+    h5_sub_add_aggregated_pr(graphsG, aggregated_xy, interp)
         
 # ----------------------------------------------------------------------------
 def h5_add_iou_system_scores(h5f, results):

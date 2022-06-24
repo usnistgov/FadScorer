@@ -70,6 +70,9 @@ def validate_pred(ds):
         
     # check for unknown labels in pred
     label_distance = len(set(pred_labels) - set(gt_labels))
+    if 'nan' in pred_labels:
+        print("Nan detetced")
+        print(set(pred_labels))
     if label_distance > 0:
         log.warning("System output contains {} extra activites not in ground-truth.".format(label_distance))        
 

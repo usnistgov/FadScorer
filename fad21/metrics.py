@@ -5,10 +5,6 @@ from .datatypes import Dataset
 from .io import *
 from .aggregators import *
 
-# for aggregators, but FS/Format/FileIO stuff should not be here
-import math
-import h5py
-
 log = logging.getLogger(__name__)
 
 class MetricsValidationError(Exception):
@@ -19,91 +15,114 @@ def generate_zero_scores(labels):
     y = []
     if len(labels)>0:
         for i in labels:
-            y.append([i, 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0], [] ])
+            y.append( [ i, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ] ])
     else:
         log.error("No matching activities found in system output.")
-        y.append(['no_macthing_activity', 0, 0, 0, 0, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ], [0.0] ])
-    return pd.DataFrame(y, columns=['activity_id', 'ap', 'ap_interp', 'precision', 'recall'])
+        y.append( [ 'no_macthing_activity', 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ] ]) 
+    return pd.DataFrame(y, columns=['activity_id', 'ap', 'precision', 'recall'])
 
-def compute_multiclass_pr(data, no_clamp = False):    
-    activities = data.activity_id_ref.unique()
+def compute_multiclass_pr(ds):
+    activities = ds.ref.activity_id.unique()
+    y = []
 
-    # Don't do this, as it will always gloss over threshold details potentially
-    # mapping them onto a single point in P/R space. This can result in a high
-    # loss of detail in extreme cases where there is lots of support points
-    # within the thershold interval:
-    # trange = np.linspace(1, 0, num=101, retstep=True)[0]
-    # trange = np.array([1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0])
-    #
-    # To create a smaller threshold range in case of an excessive amount of thresholds, 
-    # and preserve more detail it is better to reduce using available thresholds.
-
-    y = []    
-    
     # Iterate over all activity-id isolating them into a binary detection
     for act in activities:
-        # Include only relevant TP/FP (all relevant retrievals)
-        subsel = (data.activity_id_ref == act)
-        subdata = data.loc[subsel]        
-                
-        # Count and drop missed detections
-        mlen = len(subdata.loc[subdata.activity_id_hyp == '0'])
-        subdata = subdata.drop(subdata[subdata.activity_id_hyp == '0'].index)
+        # Include only relevant TP/FP (looking only at finding relevant retrievals)
+        refs = ds.ref.loc[(ds.ref.activity_id == act)].reset_index(drop=True)
+        hyps = ds.hyp.loc[(ds.hyp.activity_id == act)].reset_index(drop=True)
+        ap, prec, recl = compute_average_precision_classification(refs, hyps)
+        y.append([ act, prec, recl, ap ])
 
-        # There is at least 1 datapoint + MD
-        if len(subdata) > 0:
-            # Use all thresholds available.
-            trange = np.sort(subdata['confidence_score'].unique())
-            if trange[0] != 0.0:
-                trange = np.append(0.0, trange)
-            if trange[-1] != 1.0:
-                trange = np.append(trange, 1.0)
+    return pd.DataFrame(y, columns=['activity_id', 'precision', 'recall', 'ap' ])
 
-            # Reverse the range to be always running from high thr to low thr to
-            # preserve order of p/r. This is needed to handle edgecases w/ 1 or 2
-            # points.
-            trange = trange[::-1]            
-            alabels = [act, '0']        
-            precision,recall = [],[]        
+def ap_interp(prec, rec):
+    """Interpolated AP - Based on VOCdevkit from VOC 2011.
+    """
+    mprec, mrec, idx = ap_interp_pr(prec, rec)
+    ap = np.sum((mrec[idx] - mrec[idx - 1]) * mprec[idx])
+    return ap
 
-            # computing p/r for each threshold
-            for thr in trange:        
-                tdata = subdata[(subdata.confidence_score >= thr)]         
-                tp, fp, fn = cm_binary(tdata.activity_id_ref, tdata.activity_id_hyp, act)
-                # all retrievals above threshold
-                fp += fn             
-                # retrievals below threshold + md as they are always excluded above
-                fn = len(subdata) - len(tdata) + mlen
-                
-                # counting missed detections in
-                # if (mlen > 0) & (thr == 0): fp += mlen                
+def ap_interp_pr(prec, rec):
+    """Return Interpolated P/R curve
+    """
+    mprec = np.hstack([[0], prec, [0]])
+    mrec = np.hstack([[0], rec, [1]])
+    for i in range(len(mprec) - 1)[::-1]:
+        mprec[i] = max(mprec[i], mprec[i + 1])
+    idx = np.where(mrec[1::] != mrec[0:-1])[0] + 1
+    return mprec, mrec, idx
 
-                # Clamp to 1 (on by default)
-                if (no_clamp == False) & (thr == 1.0):
-                    prec = 1.0 if (tp+fp == 0) else tp/(tp+fp)
-                else:
-                    prec = tp/(tp+fp) if (tp+fp >0) else 0.0            
-                
-                # account for MD's: clamp to 0 for correct aP computation
-                if (mlen > 0) & (thr == 0): prec = 0
-                recl = tp/(tp+fn) if (tp+fn >0) else 0.0
-                    
-                #print("act {}, thr {}, tp {}, fp {}, fn {}, p/r {}/{}, lent {}, ldata {}, mdata {}".format(
-                #   act, thr, tp, fp, fn, prec, recl, len(tdata), len(subdata), mlen))            
-                precision.append(prec)
-                recall.append(recl)
-        # One MD, No datapoints.
+def compute_average_precision_classification(ground_truth, prediction):
+    """ Compute average precision (classification task) between ground truth and
+    predictions data frames. If multiple predictions occurs for the same
+    predicted segment, only the one with highest score is matched as true
+    positive. This code is greatly inspired by Pascal VOC devkit and
+    ActivityNET.
+
+    Note: This method has ordering issues when confidence-scores are the same.
+
+    Parameters
+    ----------
+    ground_truth : df
+        Data frame containing the ground truth instances. Required fields:
+        ['video_file_id', 'activity_id']
+    prediction : df
+        Data frame containing the prediction instances. Required fields:
+        ['video_file_id', 'activity_id', 'confidence_score']
+
+    Outputs
+    -------
+    ap : float
+        Average precision score.
+    precision : np.array[float]
+        Precision values
+    recall : np.array[float]
+        Recall values
+    """
+    npos = float(len(ground_truth))
+    lock_gt = np.ones(len(ground_truth)) * -1
+
+    # Sort predictions by decreasing score order. This is problematic when
+    # confidence scores are the same. Order will start to matter.
+    sort_idx = prediction['confidence_score'].values.argsort()[::-1]
+    #pdb.set_trace()
+    
+    # Fixes some issues w/ same confidence score and sort order.
+    # sort_idx = np.lexsort((prediction['video_file_id'].values, prediction['confidence_score'].values))
+
+    prediction = prediction.loc[sort_idx].reset_index(drop=True)
+    #print(prediction)
+
+    # Initialize true positive and false positive vectors.
+    tp = np.zeros(len(prediction))
+    fp = np.zeros(len(prediction))
+
+    # Assigning TP / FP
+    for idx in range(len(prediction)):
+        this_pred = prediction.loc[idx]
+        gt_idx = ground_truth['video_file_id'] == this_pred['video_file_id']
+
+        # At least one video matching ground truth
+        if not gt_idx.any():
+            fp[idx] = 1
+            continue
+        this_gt = ground_truth.loc[gt_idx].reset_index()
+        if lock_gt[this_gt['index']] >= 0:     
+            fp[idx] = 1
         else:
-            precision = [0.0, 0.0]
-            recall = [0.0, 1.0]
-            trange = []
+            tp[idx] = 1
+            lock_gt[this_gt['index']] = idx
 
-        # Build output
-        y.append([ act, precision, recall, trange ])
-    return pd.DataFrame(y, columns=['activity_id', 'precision', 'recall', 'thresholds' ])
+    # Computing prec-rec
+    tp = np.cumsum(tp).astype(np.float)
+    fp = np.cumsum(fp).astype(np.float)
+    rec = tp / npos
+    prec = tp / (tp + fp)
+    return ap_interp(prec, rec), prec, rec
 
 def compute_temp_iou(gstart, gend, pstart, pend):
-    """ Compute __Temporal__ Intersection over Union (__IoU__) as defined in [1], Eq.(1) given start and endpoints of intervals __g__ and __p__.    
+    """ Compute __Temporal__ Intersection over Union (__IoU__) as defined in [1], Eq.(1) given
+    start and endpoints of intervals __g__ and __p__.    
 
     :param float gstart: start first interval
     :param float gend: end first interval
@@ -128,7 +147,6 @@ def compute_temp_iou(gstart, gend, pstart, pend):
     #     pstart = 0
     # if pd.isna(pend):
     #     pend = 0;
-
     
     s0 = min(gstart, pstart)    
     spoint = max(gstart-s0, pstart-s0) 
@@ -167,7 +185,7 @@ def ac_system_level_score(metrics, pr_scores):
     """ Map internal to public representation. """
     co = []
     if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 4)])
-    if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 4)])
+    #if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 4)])
     return co
 
 def ac_activity_level_scores(metrics, pr_scores):
@@ -176,7 +194,7 @@ def ac_activity_level_scores(metrics, pr_scores):
     for index, row in pr_scores.iterrows():
         co = {}
         if 'map'        in metrics:        co['ap'] = round(row['ap'], 4)
-        if 'map_interp' in metrics: co['ap_interp'] = round(row['ap_interp'], 4)
+     #   if 'map_interp' in metrics: co['ap_interp'] = round(row['ap_interp'], 4)
         act[row['activity_id']] = co
     return act
 
@@ -233,17 +251,18 @@ def compute_aps(results):
     results = results.apply(_compute_ap, axis=1)    
     return results    
 
-#def _rectify_pr_curve(row, at_start=True, at_end=True):
 def _rectify_pr_curve(row, at_start=False, at_end=False):
     prec,recl = row.precision.copy(), row.recall.copy()
     if not np.array(row.precision).any():
             prec, recl = [0.0,0.0], [0.0, 1.0]
     else:
-        # When all thresholds are mapped to the same point in P/R space
+        # When all thresholds are mapped to one point in P/R space, extend
+        # recall range to edges.
         if (np.sum(np.diff(prec)) == 0) & (np.sum(np.diff(recl)) == 0):
-            recl[0] = 0.0            
+            log.waring("only one point ?")
+            recl[0] = 0.0
             recl[-1] = 1.0
-        # When there is MD's @end or no support at start and recall points are
+        # When there support at start/end extend and recall points are
         # missing at 1 or 0.
         if (recl[0] != 0.0):
             recl.insert(0, 0.0)
@@ -253,15 +272,4 @@ def _rectify_pr_curve(row, at_start=False, at_end=False):
             prec.append(row.precision[-1])            
     row.precision = prec
     row.recall = recl
-    return row
-
-def _compute_ap(row):
-    p, r = row.precision, row.recall
-    # Compute pinterp step-function using max. Needs to be run backwards due to
-    # properties of precision.
-    pinterp = np.maximum.accumulate(p[::-1])
-    # K-point interpolation (over all thresholds) 
-    row['ap'] = np.trapz(p, r)
-    # This will be highly optimistic
-    row['ap_interp'] = np.sum(np.diff(r[::]) * pinterp[::-1][:-1])
     return row

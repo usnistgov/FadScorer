@@ -3,14 +3,20 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 from .io import *
+from .aggregators import ap_interp_pr
 
 log = logging.getLogger(__name__)
 
-def plot_prs(h5f, root_path, title, output_fn):
+def plot_prs(h5f, root_path, title, output_fn, interp=False):
     plt.style.use('_mpl-gallery')
-    precDS = h5f["{}/prs/precision".format(root_path)]
-    recallDS = h5f["{}/prs/recall".format(root_path)]
-    stderrDS = h5f["{}/prs/stderror".format(root_path)]
+    if interp:
+        precDS = h5f["{}/prs_interp/precision".format(root_path)]
+        recallDS = h5f["{}/prs_interp/recall".format(root_path)]
+        stderrDS = h5f["{}/prs_interp/stderror".format(root_path)]
+    else:
+        precDS = h5f["{}/prs/precision".format(root_path)]
+        recallDS = h5f["{}/prs/recall".format(root_path)]
+        stderrDS = h5f["{}/prs/stderror".format(root_path)]
     x = recallDS[()]
     y = precDS[()]
     y_err = stderrDS[()]    
@@ -24,7 +30,7 @@ def plot_prs(h5f, root_path, title, output_fn):
     ax.set_title(title)
     log.info("Saving plot {}".format(output_fn))        
     plt.savefig(output_fn)
-    plt.close()
+    plt.close()  
 
 def gen_sub_prs_plot(h5f, root_path, iou, fig, ax, prefix=None):
     log.debug(root_path)
@@ -47,28 +53,34 @@ def plot_all_activity_pr(h5f, output_dir):
         plot_pr(h5f, "activity/{}".format(activity), ofn)
 
 def plot_pr(h5f, root_path, output_fn):
-    """ Plot Precision / Recall Curves """
-    largs = {} #{"drawstyle": "steps-post"}
-    plt.style.use('_mpl-gallery')
+    """ Plot Precision / Recall Curves """    
+    plt.style.use('_mpl-gallery')    
     precDS = h5f["{}/prt/precision".format(root_path)]
     recallDS = h5f["{}/prt/recall".format(root_path)]    
     x = recallDS[()]
     y = precDS[()]
-    fig, ax = plt.subplots(figsize=(12,10), constrained_layout=True)    
-    ax.plot(x, y, linewidth=1.0, **largs)
+    prec, recl, _ = ap_interp_pr(y[::-1], x[::-1])
+    fig, ax = plt.subplots(figsize=(12,10), constrained_layout=False)    
+    plt.tight_layout(pad=1.2, h_pad=1.1, w_pad=1.1)
     
+    ax.plot(x, y, linewidth=1.0, label="p")    
+    ax.plot(recl, prec, linewidth=0.5, label="p_interp")    
     ax.set(xlim=(0, 1), xticks=np.arange(0, 1, 0.1),
            ylim=(0, 1), yticks=np.arange(0, 1, 0.1))    
     ax.set_xlabel('Recall')
     ax.set_ylabel('Precision')
+    #plt.title("precision vs. recall curve")
+    ax.legend(loc='right', bbox_to_anchor=(1.0, 0.9))
     ax.set_title(root_path)
-    log.info("Saving plot {}".format(output_fn))        
+    log.info("Saving plot {}".format(output_fn))    
+    
     plt.savefig(output_fn)
     plt.close()
 
 def plot_ac(h5f, output_dir):    
     title = "Mean Precision Recall"
     plot_prs(h5f, '/system', title, os.path.join(output_dir, "ac_prs.png"))
+    #plot_prs(h5f, '/system', title, os.path.join(output_dir, "ac_prs_interp.png"), interp=True)
 
 # Plot each IoU PR Plot ndividually
 def plot_tad_single(h5f, output_dir):

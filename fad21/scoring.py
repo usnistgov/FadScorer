@@ -37,23 +37,20 @@ def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"
 
     # Fix out of scope and NA's
     remove_out_of_scope_activities(ds)
-
-    # Subselect by confidence scores
-    ds.hyp = filter_by_top_k_confidence(ds.hyp,filter_top_n)
-    
-    # Rectify data and set register
-    prep_ac_data(ds)
+ 
+    # Remove out of bound activities
+    fhyp = ds.hyp[ds.hyp.activity_id.isin(ds.activity_ids)]
+    if len(fhyp) != len(ds.hyp):
+        log.info("[xform] {} reference activities matching {} in system output.".
+            format(len(fhyp.activity_id.unique()), len(ds.hyp.activity_id.unique())))
+    ds.hyp = fhyp
 
     # Handle empty files/content
-    if len(ds.register) > 0:
-        pr_scores = compute_multiclass_pr(ds.register, no_clamp)
+    if len(ds.hyp) > 0:
+        pr_scores = compute_multiclass_pr(ds)
     else:
-        pr_scores = generate_zero_scores(ds.register)
+        pr_scores = generate_zero_scores(ds)
     
-    # Fix start/end points
-    pr_scores  = rectify_pr_curves(pr_scores)
-    pr_scores  = compute_aps(pr_scores)
-
     results    = ac_system_level_score(metrics, pr_scores)
     al_results = ac_activity_level_scores(metrics, pr_scores)
     
@@ -66,7 +63,10 @@ def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"
         h5_add_system_scores(h5f, results)
         h5_add_activity_scores(h5f, al_results)
         h5_add_activity_prt(h5f, pr_scores)
-        h5_aggregator(h5f)
+        aggPR = pr_curve_aggregator(h5f, interp=False)        
+        aggPRinterp = pr_curve_aggregator(h5f, interp=True)        
+        h5_add_aggregated_pr(h5f, aggPR, interp=False)            
+        h5_add_aggregated_pr(h5f, aggPRinterp, interp=True)    
         h5f.close()
 
     return pr_scores, results, al_results    

@@ -13,7 +13,6 @@ from .io import *
 from .filters import *
 from .validation import detect_out_of_scope_hyp_video_id
 from .metrics import *
-from .metrics import ac_system_level_score, ac_activity_level_scores, _sumup_tad_activity_level_scores, _sumup_tad_system_level_scores
 
 log = logging.getLogger(__name__)
 
@@ -109,3 +108,47 @@ def score_tad(ds, metrics=['map'], iou_thresholds=[0.5], output_dir=None, argstr
         h5f.close()    
         
     return pr_iou_scores, results, al_results
+
+def ac_system_level_score(metrics, pr_scores):
+    """ Map internal to public representation. """
+    co = []
+    if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 4)])
+    #if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 4)])
+    return co
+
+def ac_activity_level_scores(metrics, pr_scores):
+    """ Map internal to public representation. """
+    act = {}
+    for index, row in pr_scores.iterrows():
+        co = {}
+        if 'map'        in metrics:        co['ap'] = round(row['ap'], 4)
+     #   if 'map_interp' in metrics: co['ap_interp'] = round(row['ap_interp'], 4)
+        act[row['activity_id']] = co
+    return act
+
+def _sumup_tad_system_level_scores(metrics, pr_iou_scores, iou_thresholds):
+    """ Map internal to public representation. """
+    ciou = {}
+    for iout in iou_thresholds:
+        pr_scores = pr_iou_scores[iout]
+        co = {}
+        if 'map'         in metrics: co['mAP']        = round(np.mean(pr_scores.ap), 3)
+        if 'map_interp'  in metrics: co['mAP_interp'] = round(np.mean(pr_scores.ap_interp), 3)
+        ciou[iout] = co
+    return ciou
+        
+def _sumup_tad_activity_level_scores(metrics, pr_iou_scores, iou_thresholds):
+    """ Map internal to public representation. Scores per Class and IoU Level """
+    metrics = metrics    
+    act = {}    
+    for iout in iou_thresholds:        
+        prs = pr_iou_scores[iout]        
+        for index, row in prs.iterrows():            
+            co = {}
+            if 'map'         in metrics: co[        "ap"] = round(row['ap'], 3)
+            if 'map_interp'  in metrics: co[ "ap_interp"] = round(row['ap_interp'], 3)
+            activity = row['activity_id']
+            if activity not in act.keys():
+                act[activity] = {}
+            act[activity][iout] = co
+    return act

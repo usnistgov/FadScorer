@@ -28,12 +28,14 @@ def test_md_50p_cases(tmpdir):
      
      - 50_p_missing:      : 100 vid, 1 class, 50% missing, rest retrieved at 1.0 confidence
      - 50_p_missing_noise : 100 vid, 1 class, 50% missing, rest retrieved at 0.990n confidence (n := random [0..9])
-     - 50_p_correct       : 100 vid, 1 class, 50% retrieved, 50% not-retrieved (class B) at 1.0 confidence
+     - 50_p_correct       : 100 vid, 1 class, 50% retrieved, 50% not-retrieved (50_p_incorrect) at 1.0 confidence
+     - 50_p_incorrect     : 100 vid, 1 class, 50% retrieved, 50% not-retrieved (50_p_correct) at 1.0 confidence     
      - 100_p_correct      : 10 vid, 1 class, 100% retrieved (class B), at 1.0 confidence
 
     Expected output:
         50_p_missing       : aP: 0.5
-        50_p_missing_noise : aP: 0.5 (ignoring thr>=1.0)
+        50_p_missing_noise : aP: 0.5
+        50_p_correct       : ap: 0.5
         50_p_correct       : ap: 0.5
         100_p_correct      : ap: 1.0
     """
@@ -41,9 +43,10 @@ def test_md_50p_cases(tmpdir):
     hData = {}
     for entry in aData:
         hData[entry[0]] = entry[2]
-    assert(len(hData) == 4)
+    assert(len(hData) == 5)
     # resulting aP == P/R values here
-    assert(hData['50_p_missing'] == pytest.approx(0.5, 0.01))
+    assert(hData['50_p_missing'] == pytest.approx(0.5, 0.1))
     assert(hData['50_p_missing_noise'] == pytest.approx(0.5, 0.1))
     assert(hData['50_p_correct'] == pytest.approx(0.5, 0.1))
+    assert(hData['50_p_incorrect'] == pytest.approx(0.5, 0.1))
     assert(hData['100_p_correct'] == pytest.approx(1.0, 0.1))

@@ -1,4 +1,5 @@
 import logging
+from pickle import FALSE
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,6 +7,19 @@ from .io import *
 from .aggregators import ap_interp_pr
 
 log = logging.getLogger(__name__)
+
+# Fix MD endpoint when plotting p_interp valuse to avoid ramp to p/r 0,1
+def _rectify_apinterp_curve(precision, recall):
+    prec = precision.copy()
+    # When all thresholds are mapped to one point in P/R space, extend
+    # recall range to edges.
+    lval = True if prec[::-1][0] == 0 else False
+    if lval:
+        for ridx in range(len(recall)-1, -1, -1):
+            if lval & (prec[ridx] != 0):
+                lval = False;
+                prec[ridx] = 0;
+    return prec, recall
 
 def plot_prs(h5f, root_path, title, output_fn, interp=False):
     plt.style.use('_mpl-gallery')
@@ -58,8 +72,12 @@ def plot_pr(h5f, root_path, output_fn):
     precDS = h5f["{}/prt/precision".format(root_path)]
     recallDS = h5f["{}/prt/recall".format(root_path)]    
     x = recallDS[()]
-    y = precDS[()]
+    y = precDS[()]    
     prec, recl, _ = ap_interp_pr(y[::-1], x[::-1])
+    #print(root_path)
+    #print(prec)
+    prec, recl = _rectify_apinterp_curve(prec, recl)
+    #print(prec)
     fig, ax = plt.subplots(figsize=(12,10), constrained_layout=False)    
     plt.tight_layout(pad=1.2, h_pad=1.1, w_pad=1.1)
     

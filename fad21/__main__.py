@@ -71,41 +71,41 @@ def ac_scorer_cmd(args):
     print(open(os.path.join(args.output_dir, 'system_scores.csv')).read())
 
 
-def tad_scorer_cmd(args):
-    """
-    TAD Scoring (output still needs work to differentiate iou's):
-    - validate
-    - score
-    - extract + print
-    """
-    ensure_output_dir(args.output_dir)
-    ds = Dataset(load_tad_ref(args.reference_file), load_tad_hyp(args.hypothesis_file))        
-    log.debug(ds)
-    process_subset_args(args, ds)
-    # Prevent auto-filtering of faulty data    
-    if not args.skip_validation:
-        validate_tad(ds) 
-    argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
-    thresholds = [float(i) for i in args.iou_thresholds.split(',')]
-    score_tad(ds, args.metrics, thresholds , args.output_dir, argstr)
-    h5f = h5_open_archive(os.path.join(args.output_dir, 'scoring_results.h5'))
-    data = h5_extract_system_iou_scores(h5f)
-    aData = h5_extract_activity_iou_scores(h5f)
-    if args.print_alignment:
-        alignData = h5_extract_alignment(os.path.join(args.output_dir, 'scoring_results.h5'))
-        write_alignment_file(os.path.join(args.output_dir, 'alignments.csv'), alignData)
-        print("Alignments")
-        print("----------")
-        print(open(os.path.join(args.output_dir, 'alignments.csv')).read())
+# def tad_scorer_cmd(args):
+#     """
+#     TAD Scoring (output still needs work to differentiate iou's):
+#     - validate
+#     - score
+#     - extract + print
+#     """
+#     ensure_output_dir(args.output_dir)
+#     ds = Dataset(load_tad_ref(args.reference_file), load_tad_hyp(args.hypothesis_file))        
+#     log.debug(ds)
+#     process_subset_args(args, ds)
+#     # Prevent auto-filtering of faulty data    
+#     if not args.skip_validation:
+#         validate_tad(ds) 
+#     argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
+#     thresholds = [float(i) for i in args.iou_thresholds.split(',')]
+#     score_tad(ds, args.metrics, thresholds , args.output_dir, argstr)
+#     h5f = h5_open_archive(os.path.join(args.output_dir, 'scoring_results.h5'))
+#     data = h5_extract_system_iou_scores(h5f)
+#     aData = h5_extract_activity_iou_scores(h5f)
+#     if args.print_alignment:
+#         alignData = h5_extract_alignment(os.path.join(args.output_dir, 'scoring_results.h5'))
+#         write_alignment_file(os.path.join(args.output_dir, 'alignments.csv'), alignData)
+#         print("Alignments")
+#         print("----------")
+#         print(open(os.path.join(args.output_dir, 'alignments.csv')).read())
 
-    write_system_level_scores(os.path.join(args.output_dir, 'system_scores.csv'), data)
-    write_activity_level_scores(os.path.join(args.output_dir, 'activity_scores.csv'), aData)
-    print("Activity Scores")
-    print("---------------")
-    print(open(os.path.join(args.output_dir, 'activity_scores.csv')).read())
-    print("System Score")
-    print("-------------")
-    print(open(os.path.join(args.output_dir, 'system_scores.csv')).read())
+#     write_system_level_scores(os.path.join(args.output_dir, 'system_scores.csv'), data)
+#     write_activity_level_scores(os.path.join(args.output_dir, 'activity_scores.csv'), aData)
+#     print("Activity Scores")
+#     print("---------------")
+#     print(open(os.path.join(args.output_dir, 'activity_scores.csv')).read())
+#     print("System Score")
+#     print("-------------")
+#     print(open(os.path.join(args.output_dir, 'system_scores.csv')).read())
        
 def ac_hyp_validator_cmd(args):    
     ds = Dataset(load_index(args.video_index_file), load_hyp(args.hypothesis_file))    
@@ -149,17 +149,17 @@ def main(args=None):
     parser_score_ac.add_argument("-c", "--no_clamp", action="store_true", help="Do not clamp p(0) to 1, compute instead (default: off)")
     parser_score_ac.set_defaults(func = ac_scorer_cmd)
 
-    parser_score_tad = subparsers.add_parser('score-tad', help='Score system activity-detection output against ground-truth.')
-    parser_score_tad.add_argument("-r", '--reference_file', type=str, required=True)
-    parser_score_tad.add_argument("-y", '--hypothesis_file', type=str, required=True)
-    parser_score_tad.add_argument("-a", '--activity_list_file', type=str, required=False, help="Use to filter activities from scoring (REF + HYP)")
-    parser_score_tad.add_argument("-f", '--video_list_file', type=str, required=False, help="Used to filter files from scoring (REF + HYP)")
-    parser_score_tad.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
-    parser_score_tad.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
-    parser_score_tad.add_argument("-i", "--iou_thresholds", nargs='?', default="0.2", help="A comma separated list of IoU thresholds.")
-    parser_score_tad.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
-    parser_score_tad.add_argument("-n", "--print_alignment", action="store_true", default=False, help="Additionally extract and output alignment (default: off)")
-    parser_score_tad.set_defaults(func = tad_scorer_cmd)
+    # parser_score_tad = subparsers.add_parser('score-tad', help='Score system activity-detection output against ground-truth.')
+    # parser_score_tad.add_argument("-r", '--reference_file', type=str, required=True)
+    # parser_score_tad.add_argument("-y", '--hypothesis_file', type=str, required=True)
+    # parser_score_tad.add_argument("-a", '--activity_list_file', type=str, required=False, help="Use to filter activities from scoring (REF + HYP)")
+    # parser_score_tad.add_argument("-f", '--video_list_file', type=str, required=False, help="Used to filter files from scoring (REF + HYP)")
+    # parser_score_tad.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
+    # parser_score_tad.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
+    # parser_score_tad.add_argument("-i", "--iou_thresholds", nargs='?', default="0.2", help="A comma separated list of IoU thresholds.")
+    # parser_score_tad.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
+    # parser_score_tad.add_argument("-n", "--print_alignment", action="store_true", default=False, help="Additionally extract and output alignment (default: off)")
+    # parser_score_tad.set_defaults(func = tad_scorer_cmd)
 
     parser_validate_ac_hyp = subparsers.add_parser('validate-ac-hyp', help='Validate system output against video index.')
     parser_validate_ac_hyp.add_argument("-r", '--video_index_file', type=str, required=True)

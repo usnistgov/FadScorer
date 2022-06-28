@@ -62,14 +62,17 @@ fad-scorer score-ac -r tests/testdata/ac_ref_2x3.csv -y tests/testdata/ac_hyp_2x
 
 # - using verbose flag for additional info
 fad-scorer -v score-ac -r tests/testdata/ac_ref_2x3.csv -y tests/testdata/ac_hyp_2x3_1fp.csv -o tmp
-
-# Score Temporal Activity Detection Task
-fad-scorer score-tad -r tests/testdata/tad_ref_smoothcurve.csv -y tests/testdata/tad_hyp_smoothcurve.csv
 ```
 
 # Authors
 
 - 2021-2022 Lukas Diduch (lukas.diduch@nist.gov)
+
+# Contributors 
+
+- Jeffrey Byrne (jeff@visym.com)
+- Jonathan Fiscus (jonathan.fiscus@nist.gov)
+- YooYoung Lee (yooyoung.lee@nist.gov)
 
 # Licensing Statement
 

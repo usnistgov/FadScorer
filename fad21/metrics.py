@@ -21,6 +21,10 @@ def generate_zero_scores(labels):
         y.append( [ 'no_macthing_activity', 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ] ]) 
     return pd.DataFrame(y, columns=['activity_id', 'ap', 'precision', 'recall'])
 
+#
+# Wrappers
+#
+
 def compute_multiclass_pr(ds):
     activities = ds.ref.activity_id.unique()
     y = []
@@ -30,36 +34,97 @@ def compute_multiclass_pr(ds):
         # Include only relevant TP/FP (looking only at finding relevant retrievals)
         refs = ds.ref.loc[(ds.ref.activity_id == act)].reset_index(drop=True)
         hyps = ds.hyp.loc[(ds.hyp.activity_id == act)].reset_index(drop=True)
-        ap, prec, recl = compute_average_precision_classification(refs, hyps)
+        #ap, prec, recl = _ref_compute_average_precision_classification(refs, hyps)        
+        ap, prec, recl = compute_average_precision_ac(refs, hyps)
         y.append([ act, prec, recl, ap ])
 
     return pd.DataFrame(y, columns=['activity_id', 'precision', 'recall', 'ap' ])
 
-def ap_interp(prec, rec):
-    """Interpolated AP - Based on VOCdevkit from VOC 2011.
-    """
-    mprec, mrec, idx = ap_interp_pr(prec, rec)
-    ap = np.sum((mrec[idx] - mrec[idx - 1]) * mprec[idx])
-    return ap
+def compute_pr_scores_at_iou(mpred, iou_threshold):
+    """ Given dataframe of predictions compute P/R Metrics using
+    'compute_precision_score' at a specific IoU threshold.
 
-def ap_interp_pr(prec, rec):
-    """Return Interpolated P/R curve
+    :param dataframe mpred: scoring-ready hypothesis data.
+    :param float iou_threshold: Intersection Over Union threshold used to subset
+        `mpred` for scoring.
+        
+    :returns dataframe: See output of #compute_precision_score
     """
-    mprec = np.hstack([[0], prec, [0]])
-    mrec = np.hstack([[0], rec, [1]])
-    for i in range(len(mprec) - 1)[::-1]:
-        mprec[i] = max(mprec[i], mprec[i + 1])
-    idx = np.where(mrec[1::] != mrec[0:-1])[0] + 1
-    return mprec, mrec, idx
+    if len(mpred) > 0:
+        # MD is -1
+        data = pd.DataFrame(mpred.loc[(mpred.alignment != '-1') & (mpred.IoU >= iou_threshold)])
+        data.rename(columns={'alignment':'ground_truth', 'activity_id':'activity_id_ref'}, inplace=True)
+        return compute_precision_score(data, tad_mode=True)
+    else:
+        return generate_zero_scores(['zero_score'])
 
-def compute_average_precision_classification(ground_truth, prediction):
-    """ Compute average precision (classification task) between ground truth and
+#
+# Metrics
+#        
+
+def compute_average_precision_ac(ref, hyp):
+    """ Compute average precision (AC Task) between ground truth and
+    predictions data frames. If multiple predictions occur for the same
+    predicted segment, only the one with highest score is matched as true
+    positive. This code is inspired by Pascal VOC devkit and ActivityNET but
+    uses sets.
+
+    Parameters
+    ----------
+    ground_truth : df
+        Data frame containing the ground truth instances. Required fields:
+        ['video_file_id', 'activity_id']
+    prediction : df
+        Data frame containing the prediction instances. Required fields:
+        ['video_file_id', 'activity_id', 'confidence_score']
+
+    Outputs
+    -------
+    ap : float
+        Average precision score.
+    precision : np.array[float]
+        Precision values
+    recall : np.array[float]
+        Recall values
+    """
+    npos = len(ref)
+    # Remove bottom duplicate retrievals for same vid-aid
+    hyp.drop_duplicates(subset=['video_file_id'], keep='first', inplace=True)
+    # FP + MD will result in NaN for confidence score or activity_id pair, used
+    # to mark them later
+    subdata = ref.merge(hyp, how='outer', on="video_file_id", suffixes=['_ref', '_hyp'])
+    subdata.loc[subdata['confidence_score'].isna(), 'confidence_score'] = -1 # Mark MD
+    subdata[['tp', 'fp']] = [0, 0]
+    subdata.loc[subdata['confidence_score'] == -1, 'fp'] = 1 # Account for MD
+    subdata.loc[subdata['activity_id_ref'] == subdata['activity_id_hyp'], 'tp'] = 1 # Account for TP
+    subdata.loc[subdata['activity_id_ref'] != subdata['activity_id_hyp'], 'fp'] = 1 # Account for FP
+    
+    if len(subdata) == 0:
+        prec = [0.0, 0.0]
+        rec = [0.0, 1.0]                
+    else:
+        # Rectify some random noise in extreme cases introduced when sorting
+        # would occur only by confifence_score w/ identical values.
+        subdata.sort_values(["activity_id_hyp", "confidence_score"], ascending=False, inplace=True)
+        #subdata.sort_values(["confidence_score"], ascending=False, inplace=True)         
+        tp = np.cumsum(subdata.tp).astype(float)
+        fp = np.cumsum(subdata.fp).astype(float)                      
+        rec = (tp / npos).values
+        prec = (tp / (tp + fp)).values
+    #print("act {}, tp {}, fp {}, p/r {}/{}".format(act, tp, fp, prec, rec))    
+    return ap_interp(prec, rec), prec, rec
+
+def _ref_compute_average_precision_classification(ground_truth, prediction):
+    """ Method kept as reference !
+    
+    Compute average precision (classification task) between ground truth and
     predictions data frames. If multiple predictions occurs for the same
     predicted segment, only the one with highest score is matched as true
     positive. This code is greatly inspired by Pascal VOC devkit and
     ActivityNET.
-
-    Note: This method has ordering issues when confidence-scores are the same.
+    
+    Note: This method has ordering problems when confidence-scores are the same,
+    resulting in random noise + scores.
 
     Parameters
     ----------
@@ -82,16 +147,12 @@ def compute_average_precision_classification(ground_truth, prediction):
     npos = float(len(ground_truth))
     lock_gt = np.ones(len(ground_truth)) * -1
 
-    # Sort predictions by decreasing score order. This is problematic when
-    # confidence scores are the same. Order will start to matter.
-    sort_idx = prediction['confidence_score'].values.argsort()[::-1]
-    #pdb.set_trace()
-    
-    # Fixes some issues w/ same confidence score and sort order.
-    # sort_idx = np.lexsort((prediction['video_file_id'].values, prediction['confidence_score'].values))
-
-    prediction = prediction.loc[sort_idx].reset_index(drop=True)
-    #print(prediction)
+    # Sort predictions by decreasing score order.
+    #  
+    # Note: Sorting in this way is problematic when confidence scores are the
+    # same as the sorting order becomes random distorting ap !    
+    sort_idx = prediction['confidence_score'].values.argsort()[::-1]        
+    prediction = prediction.loc[sort_idx].reset_index(drop=True)    
 
     # Initialize true positive and false positive vectors.
     tp = np.zeros(len(prediction))
@@ -114,11 +175,11 @@ def compute_average_precision_classification(ground_truth, prediction):
             lock_gt[this_gt['index']] = idx
 
     # Computing prec-rec
-    tp = np.cumsum(tp).astype(np.float)
-    fp = np.cumsum(fp).astype(np.float)
+    tp = np.cumsum(tp).astype(float)
+    fp = np.cumsum(fp).astype(float)
     rec = tp / npos
     prec = tp / (tp + fp)
-    return ap_interp(prec, rec), prec, rec
+    return ap_interp(prec, rec), prec, rec    
 
 def compute_temp_iou(gstart, gend, pstart, pend):
     """ Compute __Temporal__ Intersection over Union (__IoU__) as defined in [1], Eq.(1) given
@@ -161,115 +222,4 @@ def compute_temp_iou(gstart, gend, pstart, pend):
         iou = 0
     #log.debug("[{},{}]:[{},{}] aoo: {}, aou: {}, iou: {}".format(
     #    gstart, pstart, gend, pend, aoo, aou, iou))
-    return round(iou,3)
-
-def compute_pr_scores_at_iou(mpred, iou_threshold):
-    """ Given dataframe of predictions compute P/R Metrics using
-    'compute_precision_score' at a specific IoU threshold.
-
-    :param dataframe mpred: scoring-ready hypothesis data.
-    :param float iou_threshold: Intersection Over Union threshold used to subset
-        `mpred` for scoring.
-        
-    :returns dataframe: See output of #compute_precision_score
-    """
-    if len(mpred) > 0:
-        # MD is -1
-        data = pd.DataFrame(mpred.loc[(mpred.alignment != '-1') & (mpred.IoU >= iou_threshold)])
-        data.rename(columns={'alignment':'ground_truth', 'activity_id':'activity_id_ref'}, inplace=True)
-        return compute_precision_score(data, tad_mode=True)
-    else:
-        return generate_zero_scores(['zero_score'])
-
-def ac_system_level_score(metrics, pr_scores):
-    """ Map internal to public representation. """
-    co = []
-    if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 4)])
-    #if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 4)])
-    return co
-
-def ac_activity_level_scores(metrics, pr_scores):
-    """ Map internal to public representation. """
-    act = {}
-    for index, row in pr_scores.iterrows():
-        co = {}
-        if 'map'        in metrics:        co['ap'] = round(row['ap'], 4)
-     #   if 'map_interp' in metrics: co['ap_interp'] = round(row['ap_interp'], 4)
-        act[row['activity_id']] = co
-    return act
-
-def _sumup_tad_system_level_scores(metrics, pr_iou_scores, iou_thresholds):
-    """ Map internal to public representation. """
-    ciou = {}
-    for iout in iou_thresholds:
-        pr_scores = pr_iou_scores[iout]
-        co = {}
-        if 'map'         in metrics: co['mAP']        = round(np.mean(pr_scores.ap), 3)
-        if 'map_interp'  in metrics: co['mAP_interp'] = round(np.mean(pr_scores.ap_interp), 3)
-        ciou[iout] = co
-    return ciou
-        
-def _sumup_tad_activity_level_scores(metrics, pr_iou_scores, iou_thresholds):
-    """ Map internal to public representation. Scores per Class and IoU Level """
-    metrics = metrics    
-    act = {}    
-    for iout in iou_thresholds:        
-        prs = pr_iou_scores[iout]        
-        for index, row in prs.iterrows():            
-            co = {}
-            if 'map'         in metrics: co[        "ap"] = round(row['ap'], 3)
-            if 'map_interp'  in metrics: co[ "ap_interp"] = round(row['ap_interp'], 3)
-            activity = row['activity_id']
-            if activity not in act.keys():
-                act[activity] = {}
-            act[activity][iout] = co
-    return act
-
-def cm_binary(refl_df, hypl_df, activity):
-    tp,fp,fn = 0,0,0
-    refl = refl_df.to_numpy()
-    hypl = hypl_df.to_numpy()    
-    if len(refl) > 0:
-        if len(refl) != len(hypl):
-            raise "ref activity len != hyp activity len"
-        for i in range(0, len(refl)):
-            if (refl[i] == activity):
-                if (hypl[i] == activity):
-                    tp += 1
-                else:
-                    fp += 1
-            else:
-                if (hypl[i] == activity):
-                    fn += 1
-    return tp,fp,fn
-
-# For aP computation not graph
-def rectify_pr_curves(results):
-    return results.apply(_rectify_pr_curve, axis=1)
-
-def compute_aps(results):    
-    results = results.apply(_compute_ap, axis=1)    
-    return results    
-
-def _rectify_pr_curve(row, at_start=False, at_end=False):
-    prec,recl = row.precision.copy(), row.recall.copy()
-    if not np.array(row.precision).any():
-            prec, recl = [0.0,0.0], [0.0, 1.0]
-    else:
-        # When all thresholds are mapped to one point in P/R space, extend
-        # recall range to edges.
-        if (np.sum(np.diff(prec)) == 0) & (np.sum(np.diff(recl)) == 0):
-            log.waring("only one point ?")
-            recl[0] = 0.0
-            recl[-1] = 1.0
-        # When there support at start/end extend and recall points are
-        # missing at 1 or 0.
-        if (recl[0] != 0.0):
-            recl.insert(0, 0.0)
-            prec.insert(0, row.precision[0])
-        if (recl[-1] != 1.0):
-            recl.append(1.0)
-            prec.append(row.precision[-1])            
-    row.precision = prec
-    row.recall = recl
-    return row
+    return round(iou,3)    

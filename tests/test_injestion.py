@@ -11,7 +11,7 @@ def load_tiny():
 
 def test_load_1():    
     df = load_tiny()
-    assert len(df) == 310
+    assert len(df) == 410
 
 def test_faulty_header():
     with pytest.raises(OSError):

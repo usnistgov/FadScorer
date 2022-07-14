@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='fad21',
-    version='2022.06.01',
-    description='FAD 2022 Scorer Package',
+    version='2022.07.14',
+    description='FAD 2022 Scorer',
     author='Lukas Diduch',
     author_email='lukas.diduch@nist.gov',
     url='https://openfad.nist.gov',

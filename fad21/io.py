@@ -133,7 +133,7 @@ def h5_type_fetch(object, name, attr_val):
 
 # ----------------------------------------------------------------------------
 
-def h5_create_archive(fn, mode = 'a'):
+def h5_create_archive(fn, mode = 'a'):    
     log.info("Creating scoring results file: '{}'".format(fn))
     fh = h5py.File(fn, mode)
     fh.attrs['scorer'] = "FAD21"
@@ -181,6 +181,10 @@ def h5_sub_add_aggregated_pr(graphsG, aggregated_xy, interp=False):
         prG = h5_type_fetch(graphsG, 'prs_interp', "MKey")
     else:
         prG = h5_type_fetch(graphsG, 'prs', "MKey")
+    if 'precision' in prG.keys():
+        del prG['precision']
+        del prG['recall']
+        del prG['stderror']
     prG.create_dataset('precision', data=aggregated_xy[1])
     prG.create_dataset('recall', data=aggregated_xy[0])
     prG.create_dataset('stderror', data=aggregated_xy[2])                
@@ -204,7 +208,7 @@ def h5_add_iou_system_scores(h5f, results):
 
 def h5_add_iou_activity_scores(h5f, results):
     actG = h5_type_fetch(h5f, 'activity', "LKey")
-    for activity, ious in results.items():
+    for activity, ious in results.items():        
         activitySubG = h5_type_fetch(actG, activity, "LVal")
         paramKG = activitySubG.create_group('iou')
         paramKG.attrs['ftype'] = "PKey"
@@ -243,10 +247,10 @@ def h5_add_iou_activity_prt(h5f, pr_iou_scores, iou_thresholds, activities):
                         prtG = h5_type_fetch(iouG, 'prt', "MKey")
                         prtG.create_dataset("recall", data=row['recall'][::-1])
                         prtG.create_dataset("precision", data=row['precision'][::-1])
-                        prtG.create_dataset("thresholds", data=row['thresholds'])
+                        #prtG.create_dataset("thresholds", data=row['thresholds'])
 
 def h5_add_aggregated_iou_pr(h5f, iouStr, aggregated_xy):
-    log.debug("Writing aggregated XY PR-curves for {}".format(iouStr))    
+    log.info("Writing aggregated XY PR-curves for {}".format(iouStr))    
     iousG = h5f['system/iou']
     iouG = h5_type_fetch(iousG, iouStr, "PVal")
     h5_sub_add_aggregated_pr(iouG, aggregated_xy)
@@ -299,7 +303,7 @@ def h5_extract_activity_iou_scores(h5f):
                 for metric in iouG.keys():
                     sG = iouG[metric]
                     if isinstance(sG, h5py.Dataset):
-                        dataArr.append([activity, metric, sG[()]])
+                        dataArr.append([activity, "{}_@iou_{:.2f}".format(metric, float(iou)), sG[()]])
     return dataArr
 
 # NOTE: OVERWRITES scoring results file ! Use first (or mess w/ appending as a)

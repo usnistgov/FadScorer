@@ -29,7 +29,7 @@ def scoring_run(refFile, hypFile, top_n_scores, outDir):
     write_activity_level_scores(os.path.join(outDir, 'activity_ac_scores.csv'), aData)
 
 def test_scoring_edge_cases_1(tmpdir):
-    scoring_run('testdata/ref_ec_1.csv', 'testdata/hyp_ec_1.csv', 0, tmpdir)    
+    scoring_run('testdata/ac_ref_ec_1.csv', 'testdata/ac_hyp_ec_1.csv', 0, tmpdir)    
     assert(list(io.open(tmpdir + "/system_ac_scores.csv")) == 
         list(io.open(get_root() / "testrefs/test_ec1/system_ac_scores.csv")))
     assert(list(io.open(tmpdir + "/activity_ac_scores.csv")) ==

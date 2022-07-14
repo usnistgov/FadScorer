@@ -15,7 +15,7 @@ def ap_interp(prec, rec):
     return ap
 
 def ap_interp_pr(prec, rec):
-    """Return Interpolated P/R curve
+    """Return Interpolated P/R curve - Based on VOCdevkit from VOC 2011.
     """
     mprec = np.hstack([[0], prec, [0]])
     mrec = np.hstack([[0], rec, [1]])
@@ -24,13 +24,34 @@ def ap_interp_pr(prec, rec):
     idx = np.where(mrec[1::] != mrec[0:-1])[0] + 1
     return mprec, mrec, idx
 
-def aggregate_xy(xy_list, method="average", average_resolution=100):
+# Fix precision value at highest recall if it's a MD to be 0. 
+# This helps to plot the end of the graph correctly.
+def fix_pr_tail(precision, recall):
+    prec = precision.copy()
+    lval = True if prec[::-1][0] == 0 else False
+    if lval:
+        # Walk plot backwards and mark first !0 to 0
+        for ridx in range(len(recall)-1, -1, -1):
+            if lval & (prec[ridx] != 0):
+                lval = False;
+                prec[ridx] = 0;
+    return prec, recall
+
+def aggregate_xy(xy_list, method="average", average_resolution=500):
     """ Aggregate multiple xy arrays producing an y average incl. std-error.
-        
-    :param list xy_list: list of `[x,y]` arrays (x MUST be monotonically increasing !)
-    :param str method: only 'average' method supported
-    :param int average_resolution: number of interpolation points
-    :returns list: Interpolated arrays of __precision__, __recall__, __stderr__.
+
+    Parameters
+    ----------    
+    xy_list : [2d-array] 
+        list of `[x,y]` arrays (x MUST be monotonically increasing !)
+    method : [string]
+        only 'average' method supported
+    average_resolution : [integer] 
+        number of interpolation points (x-axis)
+    
+    Output
+    ------
+    [2d-array] Interpolated arrays of __precision__, __recall__, __stderr__.
     """
     #pdb.set_trace()
     if xy_list:
@@ -58,77 +79,109 @@ def aggregate_xy(xy_list, method="average", average_resolution=100):
     log.error("Warning: No data remained after filtering, returning an empty array list")
     return [ [], [], [] ]
 
-# def aggregator(output_dir):
-#     """ Aggregate over all `ACTIVITY_*.h5` __files__ in output_dir using #aggregate_xy 
-#     :param str output_dir: Name of directory to look for h5-files.
-#     """
-#     files = get_activity_h5_files(output_dir)
-#     log.debug("Files to be aggregated: {}".format(files))
-#     f_list = [ h5py.File(f, 'r') for f in files ]    
-#     # dc['/prt'].attrs['activity_id'] 
-#     # [ [x[],y[]], ..., [x[],y[]] ]
-#     dlist = [ np.array([ dc['/prt/recall'][()], dc['/prt/precision'][()] ]) for dc in f_list ]
-#     aggregated_xy = aggregate_xy(dlist)
-#     output_fn = "{}/AGG_PRT_activities.h5".format(output_dir)
-#     write_aggregated_pr_as_hdf5(output_fn, aggregated_xy)    
-#     return None
-
-def h5_aggregator(h5f):
+def pr_curve_aggregator(h5f, activities=[]):
     """ Aggregate over all activites within a h5 AC archive using #aggregate_xy
-    Keep in mind that H5 Files have an access lock.    
-    :param H5File h5f: H5 File Handle.
-    :returns list: See output of #aggregate_xy
+
+    Parameters
+    ----------    
+    h5f: H5File
+        h5f: Container handle
+    activities: [1d-array] [Str]
+        Activities to include in plot
+
+    Returns
+    --------
+    [1d-array][1d-array] Aggregated [prec , rec, stderr], see aggregate_xy
     """     
     # [ [x[],y[]], ..., [x[],y[]] ]
     activitiesG = h5f['activity']
     dlist = []
     for aName in activitiesG.keys():
+        if len(activities) > 0:
+            if aName not in activities:
+                continue 
         activityG = activitiesG[aName]
-        prec, recl, idx = ap_interp_pr(activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1])        
-        #dlist.append(np.array([ activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1] ]))    
-        dlist.append(np.array([ recl, prec ]))
-    aggXYArr = aggregate_xy(dlist)    
-    
-    return aggXYArr
+        recl = activityG['prt/recall'][()][::-1]
+        prec = activityG['prt/precision'][()][::-1]
+        # [0,0] / empty arrays does not work well w/ interp algo.        
+        if not np.any(prec):
+            continue        
+        prec, recl, _ = ap_interp_pr(prec, recl)
+        prec, recl = fix_pr_tail(prec, recl)        
+        dlist.append(np.array([ recl, prec ]))    
+    return aggregate_xy(dlist) if len(dlist) else []
 
-def pr_curve_aggregator(h5f, interp=False):
-    """ Aggregate over all activites within a h5 AC archive using #aggregate_xy
+def compute_aggregate_pr(h5f, activities = []):
+    """ 
+    Compute aggregated pr for AC Task
 
-    Keep in mind that H5 Files have an access lock.    
-    :param H5File h5f: H5 File Handle.
-    :returns list: See output of #aggregate_xy
-    """     
-    # [ [x[],y[]], ..., [x[],y[]] ]
-    activitiesG = h5f['activity']
-    dlist = []
-    for aName in activitiesG.keys():
-        activityG = activitiesG[aName]
-        if interp:
-            prec, recl, idx = ap_interp_pr(activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1])        
-            dlist.append(np.array([ recl, prec ]))
-        else:
-            dlist.append(np.array([ activityG['prt/recall'][()][::-1], activityG['prt/precision'][()][::-1] ]))            
-    aggXYArr = aggregate_xy(dlist)
-    return aggXYArr
-    
-
-def h5_iou_aggregator(h5f, iouThr):
-    """ Aggregate over all IOU_ACTIVITY_*.h5 files in output_dir.
-
-    :param H5File h5f: File handle
-    :param float iouThr: IoU Threshold to find in the H5F archive. IoU entry must exist !    
+    Parameters
+    ----------    
+    h5f: [H5File]
+        h5f: Container handle
+    activities: [1d-array]
+        List of activities to include
     """
     # [ [x[],y[]], ..., [x[],y[]] ]
     activitiesG = h5f['activity']
     dlist = []
-    for aName in activitiesG.keys():
-        activityG = activitiesG[aName]
+    aggPR = pr_curve_aggregator(h5f)            
+    h5_add_aggregated_pr(h5f, aggPR)                
+    return None
+
+def iou_pr_curve_aggregator(h5f, iouThr, activities = []):
+    """ 
+    Compute aggregate pr over all activites for specific temp. iou threshold.    
+
+    Parameters
+    ----------    
+    h5f: H5File
+        h5f: Container handle
+    iouThr: float 
+        temp. IoU Threshold to find in the H5F archive.
+    """    
+    # [ [x[],y[]], ..., [x[],y[]] ]
+    activitiesG = h5f['activity']
+    dlist = []
+    for idx, aName in enumerate(activitiesG.keys()):
+        # Filter by activity-list entries when provided
+        if len(activities) > 0:
+            if aName not in activities:
+                continue        
+        activityG = activitiesG[aName]        
         if 'iou' in activityG.keys():
             gG = activityG['iou']
             if iouThr in gG.keys():
-                iouG = gG[iouThr]
-                dlist.append(np.array([ iouG['prt/recall'][()], iouG['prt/precision'][()] ]))
-    if len(dlist):    
-        aggXYArr = aggregate_xy(dlist)
-        h5_add_aggregated_iou_pr(h5f, iouThr, aggXYArr)        
-    return None 
+                iouG = gG[iouThr] 
+                recl = iouG['prt/recall'][()][::-1]
+                prec = iouG['prt/precision'][()][::-1]                
+                # [0,0] / empty arrays does not work well w/ interp algo.
+                if not np.any(prec):
+                    continue
+                prec, recl = fix_pr_tail(prec, recl)
+                dlist.append(np.array([ recl , prec ]))    
+    return aggregate_xy(dlist) if len(dlist) else []
+    
+def compute_aggregate_iou_pr(h5f, activities = []):
+    """ 
+    Compute aggregated pr for all temp. IoU
+
+    Parameters
+    ----------    
+    h5f: [H5File]
+        h5f: Container handle
+    activities: [1d-array]
+        List of activities to include
+    """
+    # [ [x[],y[]], ..., [x[],y[]] ]
+    activitiesG = h5f['activity']
+    dlist = []
+    # Just access once to get all IoU levels from the first activity
+    for aName in activitiesG.keys():
+        activityG = activitiesG[aName]
+        gG = activityG['iou']        
+        for tiou in gG.keys():    
+            aggXYArr = iou_pr_curve_aggregator(h5f, tiou, activities)
+            h5_add_aggregated_iou_pr(h5f, tiou, aggXYArr)
+        break      
+    return None

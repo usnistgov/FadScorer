@@ -29,17 +29,17 @@ def test_md_50p_cases(tmpdir):
      - 50_p_missing:      : 100 vid, 1 class, 50% missing, rest retrieved at 1.0 confidence
      - 50_p_missing_noise : 100 vid, 1 class, 50% missing, rest retrieved at 0.990n confidence (n := random [0..9])
      - 50_p_correct       : 100 vid, 1 class, 50% retrieved, 50% not-retrieved (50_p_incorrect) at 1.0 confidence
-     - 50_p_incorrect     : 100 vid, 1 class, 50% retrieved, 50% not-retrieved (50_p_correct) at 1.0 confidence     
+     - 50_p_incorrect     : 50 vid, 1 class, 50% not-retrieved (at 50_p_correct), then 50 retrieved at 1.0 confidence     
      - 100_p_correct      : 10 vid, 1 class, 100% retrieved (class B), at 1.0 confidence
 
     Expected output:
         50_p_missing       : aP: 0.5
         50_p_missing_noise : aP: 0.5
         50_p_correct       : ap: 0.5
-        50_p_correct       : ap: 0.5
+        50_p_incorrect       : ap: 0.5
         100_p_correct      : ap: 1.0
     """
-    data, aData = scoring_run('testdata/ref_ec_1.csv', 'testdata/hyp_ec_1.csv', 0, tmpdir)
+    data, aData = scoring_run('testdata/ac_ref_ec_1.csv', 'testdata/ac_hyp_ec_1.csv', 0, tmpdir)
     hData = {}
     for entry in aData:
         hData[entry[0]] = entry[2]

@@ -1,0 +1,15 @@
+#video_file_id,activity_id,confidence_score,frame_start,frame_end
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd2,Closing,1.000000,0,100
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd2,Closing,0.900000,100,200
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd2,Closing,0.800000,200,300
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd2,Closing,0.700000,300,400
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd2,Closing,0.600000,400,500
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd2,Closing,0.500000,500,600
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd2,Closing,0.400000,600,700
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Closing-Temp-IOU,1.000000,0,100
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Closing-Temp-IOU,0.800000,200,260
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Closing-Temp-IOU,0.700000,300,340
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Closing-Temp-IOU,0.600000,400,420
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Closing-Temp-IOU,0.500000,500,510
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Closing-Temp-IOU,0.500000,600,705
+a7cf1cb1-7ade-4ba5-a5f2-5cabf21181cd,Closing-Temp-IOU,0.500000,700,701

@@ -54,14 +54,20 @@ python tests.py
 # General Help
 fad-scorer -h
 
-# Command Help
+# Command Specific Help
 fad-scorer score-ac -h
 
 # Score Activity Classification Task
-fad-scorer score-ac -r tests/testdata/ac_ref_2x3.csv -y tests/testdata/ac_hyp_2x3_1fp.csv -o tmp
+fad-scorer score-ac -r tests/testdata/ac_ref_ec_1.csv -y tests/testdata/ac_hyp_ec_1.csv 
 
 # - using verbose flag for additional info
-fad-scorer -v score-ac -r tests/testdata/ac_ref_2x3.csv -y tests/testdata/ac_hyp_2x3_1fp.csv -o tmp
+fad-scorer -v score-ac -r tests/testdata/ac_ref_ec_1.csv -y tests/testdata/ac_hyp_ec_1.csv 
+
+# Score Temporal Activity Detection Task
+fad-scorer score-tad -r tests/testdata/tad_ref_smoothcurve.csv -y tests/testdata/tad_hyp_smoothcurve.csv 
+
+# Plot Results
+fad-scorer plot-results -f tmp/scoring_results.h5
 ```
 
 # Authors

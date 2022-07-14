@@ -16,7 +16,7 @@ setup(
         'h5py',        
         'matplotlib',        
         'tables',
-        'dill'
+        'joblib'
     ],
     # use python -m pip install -e .[interactive]
     extras_require={'interactive': ['jupyter'],

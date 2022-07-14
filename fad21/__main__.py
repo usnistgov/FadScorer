@@ -149,19 +149,6 @@ def main(args=None):
     parser_score_ac.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")    
     parser_score_ac.set_defaults(func = ac_scorer_cmd)
 
-<<<<<<< HEAD
-    # parser_score_tad = subparsers.add_parser('score-tad', help='Score system activity-detection output against ground-truth.')
-    # parser_score_tad.add_argument("-r", '--reference_file', type=str, required=True)
-    # parser_score_tad.add_argument("-y", '--hypothesis_file', type=str, required=True)
-    # parser_score_tad.add_argument("-a", '--activity_list_file', type=str, required=False, help="Use to filter activities from scoring (REF + HYP)")
-    # parser_score_tad.add_argument("-f", '--video_list_file', type=str, required=False, help="Used to filter files from scoring (REF + HYP)")
-    # parser_score_tad.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
-    # parser_score_tad.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
-    # parser_score_tad.add_argument("-i", "--iou_thresholds", nargs='?', default="0.2", help="A comma separated list of IoU thresholds.")
-    # parser_score_tad.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
-    # parser_score_tad.add_argument("-n", "--print_alignment", action="store_true", default=False, help="Additionally extract and output alignment (default: off)")
-    # parser_score_tad.set_defaults(func = tad_scorer_cmd)
-=======
     parser_score_tad = subparsers.add_parser('score-tad', help='Score system activity-detection output against ground-truth.')
     parser_score_tad.add_argument("-r", '--reference_file', type=str, required=True)
     parser_score_tad.add_argument("-y", '--hypothesis_file', type=str, required=True)
@@ -174,7 +161,6 @@ def main(args=None):
     parser_score_tad.add_argument("-j", "--nb_jobs", nargs='?', default="-1", help="Number of threads to use for MP (-1=one, 1=all)")
     #parser_score_tad.add_argument("-n", "--ignore_noscore_region", action="store_true", default=False, help="Ignore missing activity_id segements from reference. (default: off)")
     parser_score_tad.set_defaults(func = tad_scorer_cmd)
->>>>>>> TAD scorer picks IoU over CS
 
     parser_validate_ac_hyp = subparsers.add_parser('validate-ac-hyp', help='Validate system output against video index.')
     parser_validate_ac_hyp.add_argument("-r", '--video_index_file', type=str, required=True)

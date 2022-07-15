@@ -276,7 +276,7 @@ def h5_extract_system_iou_scores(h5f):
             sG = iouG[metric]
             if isinstance(sG, h5py.Dataset):
                 # CHANGE THIS TO BE metric, iou_value, score csv (also need to change write_system_level_scores)
-                dataArr.append(["{}_iou_{}".format(metric, iou), sG[()]])                
+                dataArr.append(["{}_iou_{:.2f}".format(metric, float(iou)), sG[()]])                
     return dataArr
 
 # Create array w/ activity level scores
@@ -303,7 +303,7 @@ def h5_extract_activity_iou_scores(h5f):
                 for metric in iouG.keys():
                     sG = iouG[metric]
                     if isinstance(sG, h5py.Dataset):
-                        dataArr.append([activity, "{}_@iou_{:.2f}".format(metric, float(iou)), sG[()]])
+                        dataArr.append([activity, "{}_iou_{:.2f}".format(metric, float(iou)), sG[()]])
     return dataArr
 
 # NOTE: OVERWRITES scoring results file ! Use first (or mess w/ appending as a)

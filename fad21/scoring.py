@@ -109,7 +109,7 @@ def ac_activity_level_scores(metrics, pr_scores):
     act = {}
     for index, row in pr_scores.iterrows():
         co = {}
-        if 'map'        in metrics:        co['ap'] = round(row['ap'], 4)     
+        if 'map'        in metrics:        co['AP'] = round(row['ap'], 4)     
         act[row['activity_id']] = co
     return act
 
@@ -119,7 +119,7 @@ def _sumup_tad_system_level_scores(metrics, pr_iou_scores, iou_thresholds):
     for iout in iou_thresholds:
         pr_scores = pr_iou_scores[iout]
         co = {}
-        if 'map'         in metrics: co['mAP']        = round(np.mean(pr_scores.ap), 3)        
+        if 'map'         in metrics: co['mAP']        = round(np.mean(pr_scores.ap), 4)        
         ciou[iout] = co
     return ciou
         
@@ -131,7 +131,7 @@ def _sumup_tad_activity_level_scores(metrics, pr_iou_scores, iou_thresholds):
         prs = pr_iou_scores[iout]        
         for index, row in prs.iterrows():            
             co = {}
-            if 'map'         in metrics: co[        "ap"] = round(row['ap'], 3)
+            if 'map'         in metrics: co[        "AP"] = round(row['ap'], 4)
             activity = row['activity_id']
             if activity not in act.keys():
                 act[activity] = {}

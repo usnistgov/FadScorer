@@ -45,7 +45,7 @@ inspect the hdf5 files directly. For example `h5dump, h5ls`:
 
 ```bash
 python -m pip install .[tests]
-python tests.py
+python -m pytest
 ```
 
 ## Usage Examples 

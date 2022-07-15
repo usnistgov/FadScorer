@@ -1,6 +1,6 @@
 activity_id,metric,value
-100_p_correct,ap,1.0
-50_p_correct,ap,0.5
-50_p_incorrect,ap,0.5
-50_p_missing,ap,0.5
-50_p_missing_noise,ap,0.5
+100_p_correct,AP,1.0
+50_p_correct,AP,0.5
+50_p_incorrect,AP,0.5
+50_p_missing,AP,0.5
+50_p_missing_noise,AP,0.5

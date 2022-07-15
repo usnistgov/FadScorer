@@ -33,29 +33,29 @@ def test_pr_levels(tmpdir):
 
     assert(len(hData) == 2)
         
-    assert(hData['Closing']['ap_@iou_0.00'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.10'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.20'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.30'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.40'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.50'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.60'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.70'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.80'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.90'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_1.00'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.00'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.10'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.20'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.30'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.40'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.50'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.60'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.70'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.80'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.90'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_1.00'] == pytest.approx(1.0, 0.1))
 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.00'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.10'] == pytest.approx(0.75, 0.2))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.20'] == pytest.approx(0.625, 0.3))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.30'] == pytest.approx(0.5, 0.1))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.40'] == pytest.approx(0.5, 0.1))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.50'] == pytest.approx(0.375, 0.3))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.60'] == pytest.approx(0.375, 0.3))    
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.70'] == pytest.approx(0.25, 0.2))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.80'] == pytest.approx(0.25, 0.2))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.90'] == pytest.approx(0.125, 0.3))
-    assert(hData['Closing-Temp-IOU']['ap_@iou_1.00'] == pytest.approx(0.125, 0.3))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.00'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.10'] == pytest.approx(0.75, 0.2))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.20'] == pytest.approx(0.625, 0.3))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.30'] == pytest.approx(0.5, 0.1))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.40'] == pytest.approx(0.5, 0.1))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.50'] == pytest.approx(0.375, 0.3))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.60'] == pytest.approx(0.375, 0.3))    
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.70'] == pytest.approx(0.25, 0.2))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.80'] == pytest.approx(0.25, 0.2))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.90'] == pytest.approx(0.125, 0.3))
+    assert(hData['Closing-Temp-IOU']['AP_iou_1.00'] == pytest.approx(0.125, 0.3))
 
 def test_no_score_region_exclusion(tmpdir):
     """
@@ -72,29 +72,29 @@ def test_no_score_region_exclusion(tmpdir):
 
     assert(len(hData) == 2)
 
-    assert(hData['Closing']['ap_@iou_0.00'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.10'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.20'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.30'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.40'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.50'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.60'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.70'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.80'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_0.90'] == pytest.approx(1.0, 0.1))
-    assert(hData['Closing']['ap_@iou_1.00'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.00'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.10'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.20'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.30'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.40'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.50'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.60'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.70'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.80'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_0.90'] == pytest.approx(1.0, 0.1))
+    assert(hData['Closing']['AP_iou_1.00'] == pytest.approx(1.0, 0.1))
 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.00'] == pytest.approx(1.0, 0.1))   # 7/7
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.10'] == pytest.approx(0.714, 0.3)) # 5/7
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.20'] == pytest.approx(0.571, 0.3)) # 4/7
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.30'] == pytest.approx(0.571, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.40'] == pytest.approx(0.571, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.50'] == pytest.approx(0.429, 0.3)) # 3/7
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.60'] == pytest.approx(0.429, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.70'] == pytest.approx(0.286, 0.3)) # 2/7
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.80'] == pytest.approx(0.286, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.90'] == pytest.approx(0.143, 0.3)) # 1/7
-    assert(hData['Closing-Temp-IOU']['ap_@iou_1.00'] == pytest.approx(0.143, 0.3))
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.00'] == pytest.approx(1.0, 0.1))   # 7/7
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.10'] == pytest.approx(0.714, 0.3)) # 5/7
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.20'] == pytest.approx(0.571, 0.3)) # 4/7
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.30'] == pytest.approx(0.571, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.40'] == pytest.approx(0.571, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.50'] == pytest.approx(0.429, 0.3)) # 3/7
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.60'] == pytest.approx(0.429, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.70'] == pytest.approx(0.286, 0.3)) # 2/7
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.80'] == pytest.approx(0.286, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.90'] == pytest.approx(0.143, 0.3)) # 1/7
+    assert(hData['Closing-Temp-IOU']['AP_iou_1.00'] == pytest.approx(0.143, 0.3))
 
 def test_missing_data(tmpdir):
     data, aData = tad_scoring_run('testdata/tad_ref_smoothcurve.csv', 'testdata/tad_hyp_sc_md.csv', tmpdir)    
@@ -105,26 +105,26 @@ def test_missing_data(tmpdir):
     assert(len(hData) == 2)
 
     # 7/8 = 0.875
-    assert(hData['Closing']['ap_@iou_0.00'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.10'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.20'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.30'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.40'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.50'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.60'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.70'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.80'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_0.90'] == pytest.approx(0.875, 0.3))
-    assert(hData['Closing']['ap_@iou_1.00'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.00'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.10'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.20'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.30'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.40'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.50'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.60'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.70'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.80'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_0.90'] == pytest.approx(0.875, 0.3))
+    assert(hData['Closing']['AP_iou_1.00'] == pytest.approx(0.875, 0.3))
 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.00'] == pytest.approx(0.875, 0.3)) # 7/8
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.10'] == pytest.approx(0.75, 0.2)) # 6/8
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.20'] == pytest.approx(0.604, 0.3)) # off based on CS
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.30'] == pytest.approx(0.458, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.40'] == pytest.approx(0.458, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.50'] == pytest.approx(0.312, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.60'] == pytest.approx(0.312, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.70'] == pytest.approx(0.167, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.80'] == pytest.approx(0.167, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_0.90'] == pytest.approx(0.167, 0.3)) 
-    assert(hData['Closing-Temp-IOU']['ap_@iou_1.00'] == pytest.approx(0.125, 0.3)) #1/8
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.00'] == pytest.approx(0.875, 0.3)) # 7/8
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.10'] == pytest.approx(0.75, 0.2)) # 6/8
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.20'] == pytest.approx(0.604, 0.3)) # off based on CS
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.30'] == pytest.approx(0.458, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.40'] == pytest.approx(0.458, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.50'] == pytest.approx(0.312, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.60'] == pytest.approx(0.312, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.70'] == pytest.approx(0.167, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.80'] == pytest.approx(0.167, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_0.90'] == pytest.approx(0.167, 0.3)) 
+    assert(hData['Closing-Temp-IOU']['AP_iou_1.00'] == pytest.approx(0.125, 0.3)) #1/8

@@ -8,14 +8,28 @@ import math
 import h5py
 
 def ap_interp(prec, rec):
-    """Interpolated AP - Based on VOCdevkit from VOC 2011.
+    """ Interpolated AP - Based on VOCdevkit from VOC 2011.
+
+    Parameters
+    ----------
+    prec: 1d-array
+        Precision Values
+    rec: 1d-array
+        Recall Values    
     """
     mprec, mrec, idx = ap_interp_pr(prec, rec)
     ap = np.sum((mrec[idx] - mrec[idx - 1]) * mprec[idx])
     return ap
 
 def ap_interp_pr(prec, rec):
-    """Return Interpolated P/R curve - Based on VOCdevkit from VOC 2011.
+    """ Return Interpolated P/R curve - Based on VOCdevkit from VOC 2011.
+
+    Parameters
+    ----------
+    prec: 1d-array
+        Precision Values
+    rec: 1d-array
+        Recall Values
     """
     mprec = np.hstack([[0], prec, [0]])
     mrec = np.hstack([[0], rec, [1]])
@@ -42,16 +56,17 @@ def aggregate_xy(xy_list, method="average", average_resolution=500):
 
     Parameters
     ----------    
-    xy_list : [2d-array] 
+    xy_list: 2d-array
         list of `[x,y]` arrays (x MUST be monotonically increasing !)
-    method : [string]
+    method: str
         only 'average' method supported
-    average_resolution : [integer] 
+    average_resolution: int
         number of interpolation points (x-axis)
     
     Output
     ------
-    [2d-array] Interpolated arrays of __precision__, __recall__, __stderr__.
+    2d-array:
+        Interpolated arrays of __precision__, __recall__, __stderr__.
     """
     #pdb.set_trace()
     if xy_list:

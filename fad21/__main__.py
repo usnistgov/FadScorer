@@ -4,45 +4,21 @@ import json
 import traceback
  
 from .scoring import score_ac, score_tad
-from .validation import validate_ac, validate_tad, validate_gt, validate_ac_via_index
-#from .filters import append_missing_video_id
+from .validation import validate_ac, validate_tad, detect_missing_video_id, process_subset_args
 from .datatypes import Dataset
 from .io import *
 from .plot import plot_tad_system, plot_prs, plot_all_tad_activity_pr, plot_all_ac_activity_pr
 from .aggregators import compute_aggregate_pr, compute_aggregate_iou_pr
 
-#
-# Public Scorer Version
-# 
-
-def process_subset_args(args, ds):
-    """ 
-    Method to check filter args and apply them to DS so they can be used by
-    multiple commands.    
-    """
-    if args.activity_list_file:        
-        raw_al = load_list_file(args.activity_list_file)
-        activity_list = list(filter(None, raw_al))
-        log.info("Using {} activity-id from '{}' activities-file.".format(len(activity_list), args.activity_list_file))
-        #log.debug(activity_list)
-        # Exclude all classes but include relevant video-id in reference        
-        ds.hyp = ds.hyp.loc[ds.hyp.activity_id.isin(activity_list)]
-        ds.ref = ds.ref.loc[ds.ref.activity_id.isin(activity_list) | ds.ref.activity_id.isna()]
-    if args.video_list_file:
-        raw_vl = load_list_file(args.video_list_file)
-        video_list = list(filter(None, raw_vl))
-        log.info("Using {} video-id from '{}' video-id-file.".format(len(video_list), args.video_list_file))
-        log.debug(video_list)
-        ds.ref = ds.ref.loc[ds.ref.video_file_id.isin(video_list)]
-        ds.hyp = ds.hyp.loc[ds.hyp.video_file_id.isin(video_list)]
-    log.debug(ds)
-
 def ac_scorer_cmd(args):
-    """
-    AC Scoring:
-    - validate
-    - score
-    - extract + print
+    """ AC Scoring CLI Wrapper: Loads, validates and preprocesses dataset.
+    Scores against dataset storing AP scores, and PR curves per activity in H5
+    archive. Writes system and activity level scores to CSV and stdout.
+
+    Parameters
+    ----------
+    args: argparse ns
+        Command parameters set by argparse
     """    
     
     ds = Dataset(load_ref(args.reference_file), load_hyp(args.hypothesis_file))    
@@ -68,11 +44,15 @@ def ac_scorer_cmd(args):
     print(open(os.path.join(args.output_dir, 'system_scores.csv')).read())
 
 def tad_scorer_cmd(args):
-    """
-    TAD Scoring:
-    - validate
-    - score
-    - extract + print
+    """ TAD Scoring CLI Wrapper: Loads, validates and preprocesses dataset.
+    Scores against dataset storing AP scores, and PR curves per activity and
+    tIoU threshold in H5 archive. Writes system and activity level scores to
+    CSV and stdout.
+
+    Parameters
+    ----------
+    args: argparse ns
+        Command parameters set by argparse
     """
     ensure_output_dir(args.output_dir)
     ds = Dataset(load_tad_ref(args.reference_file), load_tad_hyp(args.hypothesis_file))            
@@ -101,11 +81,26 @@ def tad_scorer_cmd(args):
     print("-------------")
     print(open(os.path.join(args.output_dir, 'system_scores.csv')).read())
        
-def ac_hyp_validator_cmd(args):    
-    ds = Dataset(load_index(args.video_index_file), load_hyp(args.hypothesis_file))    
-    validate_ac_via_index(ds) 
+def ac_hyp_validator_cmd(args):
+    """ AC system-output validation CLI Wrapper
 
-def plot_cmd(args):   
+    Parameters
+    ----------
+    args: argparse ns
+        Command parameters set by argparse
+    """
+    ds = Dataset(load_index(args.video_index_file), load_hyp(args.hypothesis_file))    
+    detect_missing_video_id(ds) 
+
+def plot_cmd(args):
+    """ AC and TAD Plot CLI Wrapper. Determine type of plot automatically via H5
+    content (AC or TAD) and plot aggegated or individual P/R curves.
+
+    Parameters
+    ----------
+    args: argparse ns
+        Command parameters set by argparse
+    """     
     h5f = h5_open_archive(args.score_file, 'r+')    
     ensure_output_dir(args.output_dir)
     act = load_list_file(args.activities_file) if len(args.activities_file) else []
@@ -124,13 +119,9 @@ def plot_cmd(args):
             ensure_output_dir(odir)
             plot_all_tad_activity_pr(h5f, odir)
 
-# -----------------------------------------------------------------------------
 def main(args=None):
-    """
-    All tool CLI is defined here.
-
-    Note: Using argparse to enforce input parameters. No checks are performed in
-    lower level methods.
+    """ FADScorer Command line interface: Defines all commands and their
+    options and executes respective command wrapper.
     """
     parser = argparse.ArgumentParser(description='FADScorer: Fine-grained Activity Detection Scorer', prog="fad-scorer")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose level output (default: off)")

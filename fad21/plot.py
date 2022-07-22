@@ -12,7 +12,7 @@ def plot_prs(h5f, root_path, title, output_fn, interp=False):
 
     Parameters
     ----------
-    h5f: H5FS File handle
+    h5f: HDF5 File handle
         Opened H5 file's handle
     root_path: str
         h5 Path to plot.
@@ -45,9 +45,17 @@ def plot_prs(h5f, root_path, title, output_fn, interp=False):
     plt.savefig(output_fn)
     plt.close()
 
-
-
 def plot_all_ac_activity_pr(h5f, output_dir):
+    """ Generate PR plots, one per activity and store them in the
+    [output_dir]/activities folder.
+
+    Parameters
+    ----------
+    h5f: HDF5 File Handle
+        Opened H5 file
+    output_dir: str
+        Output dir to create plots.
+    """
     for activity in h5f['activity']:
         ofn = os.path.join(output_dir, "{}.png".format(activity))        
         plot_pr(h5f, "activity/{}".format(activity), ofn)
@@ -88,16 +96,23 @@ def plot_pr(h5f, root_path, output_fn):
     plt.close()
 
 def plot_sub_pr(h5f, root_path, iou, fig, ax, prefix=None):
-    """ Sub-Plot matplotlib fig Precision/Recall Curve for a specific path
+    """ All P/R Plot to graph handle for data a specific path in H5F file.    
     
     Parameters
     ----------
     h5f: H5FS File handle
         Opened H5 file's handle
     root_path: str
-        h5 Path to plot.
-        /activity/Test (prs/precision)
-        /activity/Test/iou/0.2 (/prs/precision)
+        h5 Path to plot. /activity/Test (prs/precision) /activity/Test/iou/0.2
+        (/prs/precision)
+    iou: str
+        tIoU Value the plot refers to.
+    fig: matplotlib.Figure
+        NOT IN USE
+    ax: matplotlib.Axis
+        Plot handle
+    prefix: str
+        NOT IN USE
     """    
     precDS = h5f["{}/prt/precision".format(root_path)]
     recallDS = h5f["{}/prt/recall".format(root_path)]    
@@ -111,6 +126,25 @@ def plot_sub_pr(h5f, root_path, iou, fig, ax, prefix=None):
            ylim=(0, 1), yticks=np.arange(0, 1, 0.1))    
 
 def gen_sub_prs_plot(h5f, root_path, iou, fig, ax, label):
+    """ All aggregated P/R Plot to graph handle for data a specific path in H5F file.            
+    
+    Parameters
+    ----------
+    h5f: H5FS File handle
+        Opened H5 file's handle
+    root_path: str
+        h5 Path to plot.
+        /system/ (prs/precision)
+        /system/iou/0.2 (/prs/precision)
+    iou: str
+        NOT IN USE
+    fig: matplotlib.Figure
+        NOT IN USE
+    ax: matplotlib.Axis
+        Plot handle
+    label: str
+        Label for plot (f.e. includes iou level if applicable)
+    """      
     log.debug(root_path)
     largs = {} # {"drawstyle": "steps-post"}
     precDS = h5f["{}/prs/precision".format(root_path)]
@@ -125,6 +159,16 @@ def gen_sub_prs_plot(h5f, root_path, iou, fig, ax, label):
            ylim=(0, 1), yticks=np.arange(0, 1, 0.1))
 
 def plot_all_tad_activity_pr(h5f, output_dir):
+    """ Generate all (TAD) PR plots, one per activity for all IoU and store them
+    in the [output_dir]/activities folder.
+
+    Parameters
+    ----------
+    h5f: HDF5 File Handle
+        Opened H5 file
+    output_dir: str
+        Output dir to create plots.
+    """    
     for activity in h5f['activity']:
         ofn = os.path.join(output_dir, "{}.png".format(activity))
         iouG = h5f['/activity/{}/iou'.format(activity)]
@@ -143,14 +187,36 @@ def plot_all_tad_activity_pr(h5f, output_dir):
 
 # Plot each IoU PR Plot ndividually
 def plot_tad_single_system(h5f, output_dir):
+    """ Plot separate aggregated system PR plots per IoU.
+    
+    Parameters
+    ----------
+    h5f: HDF5 File Handle
+        Opened H5 file
+    output_dir: str
+        Output dir to create plots.    
+    """
     iouG = h5f['system']
     for iou in iouG.keys():
         path = "/system/iou/{}".format(iou)        
         title = "Mean Precision/Recall @ {}".format(iou)
         plot_prs(h5f, path, title, os.path.join(output_dir, "tad_prs_{}.png".format(iou)))
 
-# Plot all IoU graphs into one w/ legend
+# 
 def plot_tad_system(h5f, output_dir, legend_loc='upper right', prefix=None):
+    """ Plot all aggregated PR IoU graphs into one w/ legend
+    
+    Parameters
+    ----------
+    h5f: HDF5 File Handle
+        Opened H5 file
+    output_dir: str
+        Output dir to create plots.
+    legend_loc: str
+        Plot parameter
+    prefix: str
+        Plot Label.
+    """        
     iouG = h5f['/system/iou']
     fig, ax = plt.subplots(figsize=(8,6), constrained_layout=True)
     prefix = 'Temporal IoU = {}' if prefix is None else prefix
@@ -167,12 +233,3 @@ def plot_tad_system(h5f, output_dir, legend_loc='upper right', prefix=None):
     plt.legend(loc=legend_loc)        
     plt.savefig(os.path.join(output_dir, "tad_prs.png"))
     plt.savefig(os.path.join(output_dir, "tad_prs.pdf"))  # for non-bitmap fonts in publications
-
-def compute_timeseries_steps(v):
-    cl = np.concatenate(list(zip(v['frame_start'], v['frame_end'])))
-    ocl = []
-    for idx in range(0,len(cl)):
-        ocl.append(0 if (idx % 2) == 0 else 1)
-    cl1 = np.concatenate([[0], cl, [cl[-1]]])
-    ocl1 = np.concatenate([[0], ocl, [0]])
-    return [cl1, ocl1]

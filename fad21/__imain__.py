@@ -1,39 +1,15 @@
 # -*- coding: utf-8 -*-
 import argparse, sys, logging
-import json
 import traceback
 
-from .generation import ACGenerator, TADGenerator
-from .scoring import score_ac, score_tad
 from .validation import validate_ac, validate_tad, validate_gt
 from .datatypes import Dataset
 from .io import *
-from .plot import plot_tad, plot_ac
+from .plot import plot_tad_system, plot_prs, plot_all_tad_activity_pr, plot_all_ac_activity_pr
 
 #
 # Internal Scorer Version
 # 
-
-def process_subset_args(args, ds):
-    """ 
-    Method to check filter args and apply them to DS so they can be used by
-    multiple commands.    
-    """
-    if args.activity_list_file:
-        raw_al = load_list_file(args.activity_list_file)
-        activity_list = list(filter(None, raw_al))
-        log.info("Using {} activity-id from '{}' activities-file.".format(len(activity_list), args.activity_list_file))
-        #log.debug(activity_list)
-        ds.ref = ds.ref.loc[ds.ref.activity_id.isin(activity_list)]
-        ds.hyp = ds.hyp.loc[ds.hyp.activity_id.isin(activity_list)]        
-    if args.video_list_file:
-        raw_vl = load_list_file(args.video_list_file)
-        video_list = list(filter(None, raw_vl))
-        log.info("Using {} video-id from '{}' video-id-file.".format(len(video_list), args.video_list_file))
-        log.debug(video_list)
-        ds.ref = ds.ref.loc[ds.ref.video_file_id.isin(video_list)]
-        ds.hyp = ds.hyp.loc[ds.hyp.video_file_id.isin(video_list)]
-    log.debug(ds)
 
 def ac_generator_cmd(args):
     generator = ACGenerator(args.reference_file)
@@ -51,30 +27,6 @@ def tad_generator_cmd(args):
         "confidence_score", 
         "frame_start", 
         "frame_end" ]).to_csv(index=False, header=False))    
-
-def ac_scorer_cmd(args):    
-    ensure_output_dir(args.output_dir)    
-    ds = Dataset(load_ref(args.reference_file), load_hyp(args.hypothesis_file))
-    log.debug(ds)
-    process_subset_args(args, ds)
-    # Prevent auto-filtering of faulty data    
-    if not args.skip_validation:
-        validate_ac(ds)     
-    log.debug(ds)
-    argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
-    score_ac(ds, args.metrics, int(args.topk), args.output_dir, argstr)    
-
-def tad_scorer_cmd(args):        
-    ensure_output_dir(args.output_dir)
-    ds = Dataset(load_tad_ref(args.reference_file), load_tad_hyp(args.hypothesis_file))    
-    log.debug(ds)
-    process_subset_args(args, ds)
-    # Prevent auto-filtering of faulty data    
-    if not args.skip_validation:
-        validate_tad(ds) 
-    argstr = json.dumps(args, default=lambda o: o.__dict__, sort_keys=True)
-    thresholds = [float(i) for i in args.iou_thresholds.split(',')]
-    score_tad(ds, args.metrics, thresholds , args.output_dir, argstr)
 
 def remap_cmd(args):    
     """
@@ -164,28 +116,6 @@ def main(args=None):
     parser_gen_tad.add_argument("-f", '--match_factor', type=str, required=False, default=0.5)      
     parser_gen_tad.add_argument("-o", "--output_file", nargs='?', type=argparse.FileType('w'), default=sys.stdout)
     parser_gen_tad.set_defaults(func = tad_generator_cmd)    
-
-    parser_score_ac = subparsers.add_parser('score-ac', help='Score system activity-classification output against ground-truth.')
-    parser_score_ac.add_argument("-r", '--reference_file', type=str, required=True)
-    parser_score_ac.add_argument("-y", '--hypothesis_file', type=str, required=True)
-    parser_score_ac.add_argument("-a", '--activity_list_file', type=str, required=False, help="Use to filter activities from scoring (REF + HYP)")
-    parser_score_ac.add_argument("-f", '--video_list_file', type=str, required=False, help="Used to filter files from scoring (REF + HYP)")
-    parser_score_ac.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
-    parser_score_ac.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
-    parser_score_ac.add_argument("-t", "--topk", nargs='?', default="1")
-    parser_score_ac.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
-    parser_score_ac.set_defaults(func = ac_scorer_cmd)
-
-    parser_score_tad = subparsers.add_parser('score-tad', help='Score system activity-detection output against ground-truth.')
-    parser_score_tad.add_argument("-r", '--reference_file', type=str, required=True)
-    parser_score_tad.add_argument("-y", '--hypothesis_file', type=str, required=True)
-    parser_score_tad.add_argument("-a", '--activity_list_file', type=str, required=False, help="Use to filter activities from scoring (REF + HYP)")
-    parser_score_tad.add_argument("-f", '--video_list_file', type=str, required=False, help="Used to filter files from scoring (REF + HYP)")
-    parser_score_tad.add_argument("-o", "--output_dir", nargs='?', type=str, default="tmp")
-    parser_score_tad.add_argument("-m", "--metrics", nargs='?', default="map", help="Available metrics: map, map_11, map_101, map_avg, map_auc")
-    parser_score_tad.add_argument("-i", "--iou_thresholds", nargs='?', default="0.2", help="A comma separated list of IoU thresholds.")
-    parser_score_tad.add_argument("-p", "--skip_validation", action="store_true", help="Skip validation step (default: off)")
-    parser_score_tad.set_defaults(func = tad_scorer_cmd)
 
     parser_validate_tad = subparsers.add_parser('validate-ref', help='Validate reference data (system dev)')
     parser_validate_tad.add_argument("-r", '--reference_file', type=str, required=True)

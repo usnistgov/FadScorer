@@ -10,10 +10,22 @@ import sys
 
 log = logging.getLogger(__name__)
 
-def generate_zero_scores(labels):
+def generate_zero_scores(activities):
+    """ Create zero scores and p/r curves for a list of activites
+
+    Parameters
+    ----------
+    activities: 1darray [str]
+        List of activities
+
+    Output
+    ------
+    results: df
+        Dataframe w/ activity,ap,prec,rec columns.
+    """
     y = []
-    if len(labels)>0:
-        for i in labels:
+    if len(activities)>0:
+        for i in activities:
             y.append( [ i, 0, [ 0.0, 0.0 ], [ 0.0, 0.0 ] ])
     else:
         log.error("No matching activities found in system output.")
@@ -24,6 +36,21 @@ def generate_zero_scores(labels):
 # Wrappers
 #
 def compute_multiclass_pr(ds):
+    """ Compute average precision score (AP) and precision-recall curve for all
+        activities. (AC Task)
+
+    Parameters
+    ----------
+    ds: Dataset
+        Dataset w/ reference and hypothesis dataframes set.
+        Ref: [video_id, activity_id]    
+        Hyp: [video_id, activity_id, confience_score]    
+
+    Output
+    ------
+    results: df
+        Dataframe w/ activity,ap,prec,rec columns.
+    """
     y, activities = [], ds.ref.activity_id.unique()
     # Iterate over all activity-id treating them as a binary detection
     for act in activities:
@@ -34,15 +61,29 @@ def compute_multiclass_pr(ds):
         y.append([ act, prec, recl, ap ])
     return pd.DataFrame(y, columns=['activity_id', 'precision', 'recall', 'ap' ])
 
-def compute_multiclass_iou_pr(ds, iou_thresholds=np.linspace(0.5, 0.95, 10), nb_jobs=-1):
-    """ Given dataframe of predictions compute P/R Metrics using
-    'compute_average_precision_tad' at a specific IoU threshold.
+def compute_multiclass_iou_pr(ds, iou_thresholds=np.linspace(0.5, 0.95, 10), nb_jobs=-1):    
+    """ Compute average precision score (AP) and precision-recall curves for
+    each activity at a set of specific temp. intersection-over-union (tIoU)
+    thresholds. If references have empty activity_id they will be marked as
+    'NO_SCORE_REGION' and are excluded from scoring. (TAD Task)
+    
+    Parameters
+    ----------
+    ds: Dataset
+        Dataset w/ reference and hypothesis dataframes set. Ref: [video_id,
+        activity_id, frame_start, frame_end] Hyp: [video_id, activity_id,
+        frame_start, frame_end, confience_score]
+    iou_thresholds: 1darray [int]
+        List of IoU levels to score at.
+    nb_jobs: int
+        Speed up using multi-processing. (-1 use one cpu, 0 use all cpu, N use n
+        cpu)
 
-    :param dataframe mpred: scoring-ready hypothesis data.
-    :param float iou_threshold: Intersection Over Union threshold used to subset
-        `mpred` for scoring.
-        
-    :returns dataframe: See output of #compute_precision_score
+    Output
+    ------
+    results: dict [ds]
+        Dict of Dataframe w/ activity,ap,prec,rec columns w/ IoU-Thresholds as
+        keys.
     """
     # Initialize
     scores = {}
@@ -72,19 +113,20 @@ def compute_multiclass_iou_pr(ds, iou_thresholds=np.linspace(0.5, 0.95, 10), nb_
 #        
 
 def compute_average_precision_ac(ref, hyp):
-    """ Compute average precision and precision-recall curve (AC Task / ranked
-    retrieval) between ground truth and predictions data frames. If multiple
-    predictions occur for the same predicted segment, only the one with highest
-    score is matched as true positive. Parts of this code are inspired by Pascal
-    VOC devkit/ActivityNET.
+    """ Compute average precision score (AP) and precision-recall curve between
+    reference and hypothesis data frames given references for a single activity.    
+    
+    If multiple predictions occur for the same predicted segment, only the one
+    with highest score is matched as true positive. Parts of this code are
+    inspired by Pascal VOC devkit/ActivityNET.
     
     Parameters
     ----------
-    ground_truth : df
-        Data frame containing the ground truth instances. Required fields:
+    ref : df
+        Reference data-frame w. same activity_id. Consists of 
         ['video_file_id', 'activity_id']
-    prediction : df
-        Data frame containing the prediction instances. Required fields:
+    hyp : df
+        Hypothesis data-frame (system output) consists of:
         ['video_file_id', 'activity_id', 'confidence_score']
 
     Outputs
@@ -92,9 +134,9 @@ def compute_average_precision_ac(ref, hyp):
     ap : float
         Average precision score (using p_interp).
     precision : 1darray
-        Precision values
+        Precision Curve values
     recall : 1darray
-        Recall values
+        Recall Curve values
     """
     npos = len(ref)
     sys.stdout.write('.')  
@@ -158,12 +200,14 @@ def compute_average_precision_tad(ref, hyp, iou_thresholds=np.linspace(0.5, 0.95
 
     Outputs
     -------
-    ap : float
-        Average precision score.
-    precision : 1darray
-        Precision values
-    recall : 1darray
-        Recall values
+    scores: dict of tuple [ap, precision, recall]
+        Dictionary w/ tIoU as keys. Values are
+        ap : float
+            Average precision score.
+        precision : 1darray
+            Precision values
+        recall : 1darray
+            Recall values
     """
         
     # REF has same amount of !score_regions for all runs, which need to be
@@ -207,7 +251,7 @@ def segment_iou(ref_start, ref_end, tgts):
     """
     Compute __Temporal__ Intersection over Union (__IoU__) as defined in 
     [1], Eq.(1) given start and endpoints of intervals __g__ and __p__.    
-    Vectorized impl. from ActivityNET/Pascal VOC devkit.
+    Vectorized implementation from ActivityNET/Pascal VOC devkit.
 
     Parameters
     ----------

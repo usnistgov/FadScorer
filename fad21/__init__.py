@@ -1,3 +1,8 @@
+"""
+Python package `fad21` for scoring.
+.. include:: ../README.md
+"""
+
 from .scoring import *
 from .metrics import *
 from .scoring import score_ac, score_tad

@@ -16,6 +16,10 @@ class ValidationError(Exception):
 
 def tad_add_noscore_region(ds):
     """ De-NaN GT and PRED (should ideally not have nan activity_id)
+    Parameters
+    ----------
+    ds: Dataset object
+        Reference and Hypothesis dataframes.    
     """    
     # Check for NaN Activity Id and remove. Throw a warning now, might be an exception later.
     gtnan = ds.ref.isna().activity_id
@@ -34,13 +38,14 @@ def tad_add_noscore_region(ds):
     # Check for NaN - END
 
 def remove_out_of_scope_activities(ds):
-    """ 
-    If there are any activity-id which are out of scope or NA, whole entry is
-    removed.    
-    
-    Side Effects:
-    -------------
-    - Modifies ds.hyp
+    """ If there are any activity-id which are out of scope or NA, whole entry is
+    removed from hypothesis. 
+
+    Parameters
+    ----------
+    ds: Dataset object
+        Reference and Hypothesis dataframes.
+
     """
     # ref.activity_id will already include NO_SCORE_REGION activity 
     ds.hyp.drop(ds.hyp[~ds.hyp.activity_id.isin(ds.ref.activity_id.unique())].index, inplace = True)
@@ -51,10 +56,17 @@ def remove_out_of_scope_activities(ds):
     # ds.ref.drop(ds.ref[ds.ref.activity_id.isna()].index, inplace = True)    
 
 def validate_gt(ds):
-    """
-    Validate Ground Truth Dataframe
-    :params DataSet ds: Dataset w/ ref and hyp data
-    :raises ValidationError: if GT data has duplicate entries
+    """ Reference Validation
+
+    Parameters
+    ----------
+    ds: Dataset object
+        Reference and Hypothesis dataframes.
+
+    Exceptions
+    ----------
+    ValidationError:
+        If reference data has duplicate entries
     """
     d_raw, d_dedup = ds.ref, ds.ref.drop_duplicates()
     l_raw, l_dedup = len(d_raw), len(d_dedup)
@@ -65,8 +77,12 @@ def validate_gt(ds):
         raise ValidationError("Duplicates in Ground-Truth file detected. {} duplicates found.".format(l_raw-l_dedup))
 
 def detect_missing_video_id(ds):
-    """ Validate System Output for missing video-id against REF
-    :params DataSet ds: Dataset w/ ref and hyp data    
+    """ Validate System Output for missing video-id against reference.
+
+    Parameters
+    ----------
+    ds: Dataset object
+        Reference and Hypothesis dataframes.
     """
     ds.ref['video_file_id'] = pd.Categorical(ds.ref.video_file_id)
     ds.hyp['video_file_id'] = pd.Categorical(ds.hyp.video_file_id)
@@ -75,14 +91,19 @@ def detect_missing_video_id(ds):
     label_distance = len(set(ref_labels) - set(hyp_labels))
     if label_distance > 0:
         log.warning("System output is missing {} video-file-id labels.".format(label_distance))
-        # Past behavior
-        # --:raises ValidationError: Hyp is missing video-id from REF
-        # raise ValidationError("Missing video-file-id in system output.")
 
 def detect_out_of_scope_hyp_video_id(ds):
     """ Validate System Output for video_id not present in reference data.
     :params DataSet ds: Dataset w/ ref and hyp data
-    :raises ValidationError: Out-of-scope video-id detected
+    Parameters
+    ----------    
+    ds: DataSet
+        Dataset w/ ref and hyp data
+
+    Exceptions
+    ----------
+    ValidationError:
+        Out-of-scope video-id detected
     """
     ref_labels = ds.ref['video_file_id'].unique()
     hyp_labels = ds.hyp['video_file_id'].unique()
@@ -96,12 +117,12 @@ def detect_out_of_scope_hyp_video_id(ds):
         raise ValidationError("Unknown video-file-id in system output.")
 
 def validate_pred(ds):
-    """ Validate Prediction Dataframe.
+    """ Validate Hypothesis.
 
     Parameters
     ----------    
-    ds: DataSet
-        Dataset w/ ref and hyp data
+    ds: Dataset object
+        Reference and Hypothesis dataframes.
     """
     gt_labels = ds.ref['activity_id'].unique()
     pred_labels = ds.hyp['activity_id'].unique()
@@ -128,25 +149,57 @@ def validate_pred(ds):
         log.warning("{} entries will be marked as missed.".format(len(pred_vid_in_gt) - len(matching_pred)))
     
 def validate_ac(ds):
-    """ Top-Level AC Validation Method 
-    :params DataSet ds: Dataset w/ ref and hyp data    
+    """ AC Validation Wrapper
+
+    Parameters
+    ----------    
+    ds: Dataset object
+        Reference and Hypothesis dataframes.
     """    
     validate_gt(ds)
     detect_out_of_scope_hyp_video_id(ds)
     detect_missing_video_id(ds)
-    validate_pred(ds)
-
-def validate_ac_via_index(ds):
-    """ Top-Level AC Validation Method 
-    :params DataSet ds: Dataset w/ VALIDATION file (#video_id,frame_rate) and hyp data    
-    """    
-    detect_missing_video_id(ds)    
+    validate_pred(ds) 
 
 def validate_tad(ds):
-    """ Top-Level TAD Validation Method
-    :params DataSet ds: Dataset w/ ref and hyp data
+    """ TAD Validation Wrapper
+
+    Parameters
+    ----------    
+    ds: Dataset object
+        Reference and Hypothesis dataframes.
     """    
     validate_gt(ds)
     detect_out_of_scope_hyp_video_id(ds)    
     validate_pred(ds)
 
+def process_subset_args(args, ds):
+    """ Apply activity-id and video-id inclusion-only filters to dataset
+    reducing ref and hyp to a subset.    
+    
+    Parameters
+    ----------
+    args: argparse args
+        Argument object from CLI with activity_list_file: str
+            List of activities to include
+        video_list_file: str
+            List of video-id to include            
+    ds: Dataset object
+        Reference and Hypothesis dataframes.
+    """
+    if args.activity_list_file:        
+        raw_al = load_list_file(args.activity_list_file)
+        activity_list = list(filter(None, raw_al))
+        log.info("Using {} activity-id from '{}' activities-file.".format(len(activity_list), args.activity_list_file))
+        #log.debug(activity_list)
+        # Exclude all classes but include relevant video-id in reference        
+        ds.hyp = ds.hyp.loc[ds.hyp.activity_id.isin(activity_list)]
+        ds.ref = ds.ref.loc[ds.ref.activity_id.isin(activity_list) | ds.ref.activity_id.isna()]
+    if args.video_list_file:
+        raw_vl = load_list_file(args.video_list_file)
+        video_list = list(filter(None, raw_vl))
+        log.info("Using {} video-id from '{}' video-id-file.".format(len(video_list), args.video_list_file))
+        log.debug(video_list)
+        ds.ref = ds.ref.loc[ds.ref.video_file_id.isin(video_list)]
+        ds.hyp = ds.hyp.loc[ds.hyp.video_file_id.isin(video_list)]
+    log.debug(ds)

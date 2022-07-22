@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 import csv
-from sklearn import metrics as skm
 import json
 import logging
 import os
@@ -16,19 +15,28 @@ from .metrics import *
 log = logging.getLogger(__name__)  
 
 def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}", no_clamp = False):
-    """ Score System output (hypothesis) of Activity Classification Task (AC) incl.
-    - no activity labels
-    - missing video-id
-    
-    :param fad21.Dataset ds  : Dataset Object w/ REF + HYP
-    :param list[str] metrics : Array of metrics to include ['map', 'map_interp']
-    :param int filter_top_n  : Subselect by top confidence scores before scoring
-    :param str output_dir    : Path to a directory (created on demand) for output files
-    :returns tuple: __pr_scores__, __results__, __al_results__
-    
-    > - pr_scores: multi-class pr for all activities
-    > - results     metrics for system level
-    > - al_results  metrics for activity level
+    """ Score System output of Activity Classification Task (AC)
+
+    Parameters
+    ----------
+    ds: Dataset
+        Dataset Object w/ REF + HYP
+    metrics: list [str] 
+        Array of metrics to include. Currently only ['map'] is supported.
+    filter_top_n: int
+        DEPRECATED
+    output_dir: str 
+        Path to a directory (created on demand) for output files
+
+    Output
+    ------
+    tuple:
+        pr_scores: ??
+            multi-class pr for all activities
+        results: ??
+            metrics for system level
+        al_results: ??
+            metrics for activity level
     """
     # Safety check in case this is called from somewhere else than main.
     detect_out_of_scope_hyp_video_id(ds)
@@ -58,17 +66,28 @@ def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"
     return pr_scores, results, al_results    
   
 def score_tad(ds, iou_thresholds, metrics=['map'], output_dir=None, nb_jobs = -1, argstr = "{}"):
-    """ Score System output (hypothesis) of Temporal Activity Detection Task (TAD)
+    """ Score System output of Temporal Activity Detection Task (TAD)
     
-    :param fad21.Dataset ds:          Dataset Object w/ REF + HYP
-    :param list[str] metrics:     Array of metrics to include
-    :param list[float] iou_threshold: List of IoU Thresholds to use
-    :param str output_dir:  Path to a directory (created on demand) for output files    
-    :returns tuple: __pr_scores__, __results__, __al_results__
+    Parameters
+    ----------
+    ds: Dataset
+        Dataset Object w/ REF + HYP
+    iou_thresholds: list[float]
+        List of IoU Thresholds to use
+    metrics: list[str] 
+        Array of metrics to include
+    output_dir: str
+        Path to a directory (created on demand) for output files    
     
-    > - pr_iou_scores: multi-class pr for all activities and iou
-    - results     metrics for system level
-    - al_results  metrics for activity level
+    Outputs
+    -------
+    tuple:    
+        pr_iou_scores 
+            multi-class pr for all activities and iou
+        results     
+            metrics for system level
+        al_results  
+            metrics for activity level
     """    
 
     # FIXME: Use a No score-region parameter
@@ -98,14 +117,27 @@ def score_tad(ds, iou_thresholds, metrics=['map'], output_dir=None, nb_jobs = -1
     return pr_iou_scores, results, al_results
 
 def ac_system_level_score(metrics, pr_scores):
-    """ Map internal to public representation. """
+    """ Map internal scores to a standartized output format.
+    Parameters
+    ----------
+    metrics: list [str]
+        List of metrics
+    pr_scores: DataFrame
+        DataFrame w/ scores per activity.
+    """    
     co = []
-    if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 4)])
-    #if 'map_interp' in metrics: co.append(['mAP_interp', round(np.mean(pr_scores.ap_interp), 4)])
+    if 'map'        in metrics: co.append(['mAP',     round(np.mean(pr_scores.ap), 4)])    
     return co
 
 def ac_activity_level_scores(metrics, pr_scores):
-    """ Map internal to public representation. """
+    """ Map internal scores to a standartized output format.
+    Parameters
+    ----------
+    metrics: list [str]
+        List of metrics
+    pr_scores: DataFrame
+        DataFrame w/ scores per activity.
+    """        
     act = {}
     for index, row in pr_scores.iterrows():
         co = {}
@@ -114,7 +146,16 @@ def ac_activity_level_scores(metrics, pr_scores):
     return act
 
 def _sumup_tad_system_level_scores(metrics, pr_iou_scores, iou_thresholds):
-    """ Map internal to public representation. """
+    """ Map internal scores to a standartized output format.
+    Parameters
+    ----------
+    metrics: list[str]
+        List of metrics
+    pr_iou_scores: dict[Dataframe]
+        Dictionary of DataFrames w/ iout as keys
+    iou_thresholds: list [float]
+        List of thresholds
+    """    
     ciou = {}
     for iout in iou_thresholds:
         pr_scores = pr_iou_scores[iout]
@@ -124,7 +165,16 @@ def _sumup_tad_system_level_scores(metrics, pr_iou_scores, iou_thresholds):
     return ciou
         
 def _sumup_tad_activity_level_scores(metrics, pr_iou_scores, iou_thresholds):
-    """ Map internal to public representation. Scores per Class and IoU Level """
+    """ Map internal scores to a standartized output format.
+    Parameters
+    ----------
+    metrics: list[str]
+        List of metrics
+    pr_iou_scores: dict[Dataframe]
+        Dictionary of DataFrames w/ iout as keys
+    iou_thresholds: list [float]
+        List of thresholds
+    """    
     metrics = metrics    
     act = {}    
     for iout in iou_thresholds:        

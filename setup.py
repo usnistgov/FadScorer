@@ -20,7 +20,7 @@ setup(
     ],
     # use python -m pip install -e .[interactive]
     extras_require={'interactive': ['jupyter'],
-                    'documentation': ['pydoc-markdown[novella]', 'mkdocs', 'mkdocs-windmill'],
+                    'documentation': ['pdoc'],
                     'tests': ['pytest']},
     setup_requires=['pytest-runner', 'flake8'],
     tests_require=['pytest'],

@@ -18,8 +18,8 @@ def generate_zero_scores(activities):
     activities: 1darray [str]
         List of activities
 
-    Output
-    ------
+    Returns
+    -------
     results: df
         Dataframe w/ activity,ap,prec,rec columns.
     """
@@ -46,8 +46,8 @@ def compute_multiclass_pr(ds):
         Ref: [video_id, activity_id]    
         Hyp: [video_id, activity_id, confience_score]    
 
-    Output
-    ------
+    Returns
+    -------
     results: df
         Dataframe w/ activity,ap,prec,rec columns.
     """
@@ -79,8 +79,8 @@ def compute_multiclass_iou_pr(ds, iou_thresholds=np.linspace(0.5, 0.95, 10), nb_
         Speed up using multi-processing. (-1 use one cpu, 0 use all cpu, N use n
         cpu)
 
-    Output
-    ------
+    Returns
+    -------
     results: dict [ds]
         Dict of Dataframe w/ activity,ap,prec,rec columns w/ IoU-Thresholds as
         keys.
@@ -129,7 +129,7 @@ def compute_average_precision_ac(ref, hyp):
         Hypothesis data-frame (system output) consists of:
         ['video_file_id', 'activity_id', 'confidence_score']
 
-    Outputs
+    Returns
     -------
     ap : float
         Average precision score (using p_interp).
@@ -198,15 +198,15 @@ def compute_average_precision_tad(ref, hyp, iou_thresholds=np.linspace(0.5, 0.95
     iou_thresholds : 1darray, optional
         Temporal IoU Threshold (>=0)        
 
-    Outputs
+    Returns
     -------
-    scores: dict of tuple [ap, precision, recall]
-        Dictionary w/ tIoU as keys. Values are
-        ap : float
+    dict 
+        Values are tuples [ap, precision, recall]. Keys are tIoU thr.
+        - **ap** (float)
             Average precision score.
-        precision : 1darray
+        - **precision** (1darray)
             Precision values
-        recall : 1darray
+        - **recall** (1darray)
             Recall values
     """
         
@@ -262,7 +262,7 @@ def segment_iou(ref_start, ref_end, tgts):
     tgts : 2d array
         Temporal test segments containing [starting x N, ending X N] times.
 
-    Outputs
+    Returns
     -------
     tiou : 1d array
         Temporal intersection over union score of the N's candidate segments.

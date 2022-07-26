@@ -38,9 +38,17 @@ def ap_interp_pr(prec, rec):
     idx = np.where(mrec[1::] != mrec[0:-1])[0] + 1
     return mprec, mrec, idx
 
-# Fix precision value at highest recall if it's a MD to be 0. 
-# This helps to plot the end of the graph correctly.
 def fix_pr_tail(precision, recall):
+    """ Fix precision value at highest recall if it's a MD to be 0. This helps
+    to plot the end of the P/R graph correctly (step instead of a ramp).
+
+    Parameters
+    ----------
+    precision: 1d-array
+        Precision Values
+    recall: 1d-array
+        Recall Values        
+    """
     prec = precision.copy()
     lval = True if prec[::-1][0] == 0 else False
     if lval:
@@ -52,10 +60,10 @@ def fix_pr_tail(precision, recall):
     return prec, recall
 
 def aggregate_xy(xy_list, method="average", average_resolution=500):
-    """ Aggregate multiple xy arrays producing an y average incl. std-error.
+    """ Aggregate multiple xy arrays producing an y average including std-error.
 
     Parameters
-    ----------    
+    ----------
     xy_list: 2d-array
         list of `[x,y]` arrays (x MUST be monotonically increasing !)
     method: str
@@ -63,9 +71,9 @@ def aggregate_xy(xy_list, method="average", average_resolution=500):
     average_resolution: int
         number of interpolation points (x-axis)
     
-    Output
-    ------
-    2d-array:
+    Returns
+    -------
+    2d-array
         Interpolated arrays of __precision__, __recall__, __stderr__.
     """
     #pdb.set_trace()
@@ -96,19 +104,20 @@ def aggregate_xy(xy_list, method="average", average_resolution=500):
 
 def pr_curve_aggregator(h5f, activities=[]):
     """ Aggregate over all activites within a h5 AC archive using #aggregate_xy
+    method.
 
     Parameters
-    ----------    
+    ----------
     h5f: H5File
-        h5f: Container handle
-    activities: [1d-array] [Str]
-        Activities to include in plot
+        HF5 Container handle.
+    activities: 1d-array [str]
+        Activities to include in the plot
 
     Returns
-    --------
-    [1d-array][1d-array] Aggregated [prec , rec, stderr], see aggregate_xy
-    """     
-    # [ [x[],y[]], ..., [x[],y[]] ]
+    -------
+    2d-array
+        Aggregated [prec , rec, stderr] array, see aggregate_xy
+    """         
     activitiesG = h5f['activity']
     dlist = []
     for aName in activitiesG.keys():
@@ -128,13 +137,13 @@ def pr_curve_aggregator(h5f, activities=[]):
 
 def compute_aggregate_pr(h5f, activities = []):
     """ 
-    Compute aggregated pr for AC Task
+    Compute aggregated pr for AC Task.
 
     Parameters
-    ----------    
-    h5f: [H5File]
-        h5f: Container handle
-    activities: [1d-array]
+    ----------
+    h5f: H5File
+        HF5 Container handle.
+    activities: 1d-array
         List of activities to include
     """
     # [ [x[],y[]], ..., [x[],y[]] ]
@@ -149,11 +158,16 @@ def iou_pr_curve_aggregator(h5f, iouThr, activities = []):
     Compute aggregate pr over all activites for specific temp. iou threshold.    
 
     Parameters
-    ----------    
+    ----------
     h5f: H5File
-        h5f: Container handle
+        HF5 Container handle.
     iouThr: float 
         temp. IoU Threshold to find in the H5F archive.
+
+    Returns
+    -------
+    2d-array
+        Aggregated [prec , rec, stderr] array, see aggregate_xy
     """    
     # [ [x[],y[]], ..., [x[],y[]] ]
     activitiesG = h5f['activity']
@@ -178,13 +192,12 @@ def iou_pr_curve_aggregator(h5f, iouThr, activities = []):
     return aggregate_xy(dlist) if len(dlist) else []
     
 def compute_aggregate_iou_pr(h5f, activities = []):
-    """ 
-    Compute aggregated pr for all temp. IoU
+    """ Compute aggregated pr for all temp. IoU
 
     Parameters
-    ----------    
-    h5f: [H5File]
-        h5f: Container handle
+    ----------
+    h5f: H5File
+        HF5 Container handle.
     activities: [1d-array]
         List of activities to include
     """

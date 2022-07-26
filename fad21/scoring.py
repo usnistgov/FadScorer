@@ -30,12 +30,12 @@ def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"
 
     Output
     ------
-    tuple:
-        pr_scores: ??
+    Tuple with followin values:
+        - **pr_scores** (??)
             multi-class pr for all activities
-        results: ??
+        - **results** (??)
             metrics for system level
-        al_results: ??
+        - **al_results**: ??
             metrics for activity level
     """
     # Safety check in case this is called from somewhere else than main.
@@ -79,14 +79,14 @@ def score_tad(ds, iou_thresholds, metrics=['map'], output_dir=None, nb_jobs = -1
     output_dir: str
         Path to a directory (created on demand) for output files    
     
-    Outputs
+    Returns
     -------
-    tuple:    
-        pr_iou_scores 
+    Tuple with following values:
+        - **pr_iou_scores** (dict of df)
             multi-class pr for all activities and iou
-        results     
+        - **results** (df)
             metrics for system level
-        al_results  
+        - **al_results** (df)
             metrics for activity level
     """    
 

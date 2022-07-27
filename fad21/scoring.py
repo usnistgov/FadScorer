@@ -14,7 +14,7 @@ from .metrics import *
 
 log = logging.getLogger(__name__)  
 
-def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}", no_clamp = False):
+def score_ac(ds, metrics=['map'], filter_top_n=0, output_dir=None, argstr = "{}"):
     """ Score System output of Activity Classification Task (AC)
 
     Parameters

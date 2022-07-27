@@ -74,7 +74,7 @@ def aggregate_xy(xy_list, method="average", average_resolution=500):
     Returns
     -------
     2d-array
-        Interpolated arrays of __precision__, __recall__, __stderr__.
+        Interpolated arrays of *precision*, *recall*, *stderr*.
     """
     #pdb.set_trace()
     if xy_list:
@@ -116,7 +116,7 @@ def pr_curve_aggregator(h5f, activities=[]):
     Returns
     -------
     2d-array
-        Aggregated [prec , rec, stderr] array, see aggregate_xy
+        Aggregated [*precision* , *reccall*, *stderr*] array, see aggregate_xy
     """         
     activitiesG = h5f['activity']
     dlist = []

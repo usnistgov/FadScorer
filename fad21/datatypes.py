@@ -25,19 +25,16 @@ def get(list, index, default=None):
         return default
 
 class Dataset(object):
-    """ Dataset State
+    """ Represent reference and hypothesis data
 
     Data Spec
-    ---------
-    # index_df      = { video_file_id, tbd } // NOT IN USE
-    
-    reference    = { video_file_id, start_frame, end_frame,                    activity_id, instance_id }
-    hypothesis   = { video_file_id, start_frame, end_frame, processing_status, activity_id, confidence_score }        
-    register     = { video_file_id, activity_id_hyp, activtiy_id_ref, confidence_score }
+        
+        - reference  { video_file_id, start_frame, end_frame, activity_id }
+        - hypothesis { video_file_id, start_frame, end_frame, activity_id, confidence_score }                
 
-    # For Advanced Usage
-    activity_ids = List of activity-ids to use (default: unique(REF.activity_id))
-    video_ids    = List of video-ids to use (default: unique(REF.video_file_id))
+        # for inclusion filter
+        activity_ids = List of activity-ids to use (default: unique(REF.activity_id))
+        video_ids    = List of video-ids to use (default: unique(REF.video_file_id))
     """
 
     def __init__(self, ref=None, hyp=None, register=None):
@@ -49,8 +46,6 @@ class Dataset(object):
             Reference Dataframe
         hyp: pd.DataFrame
             Hypothesis Dataframe
-        register: pd.DataFrame
-            Dataframe for internal use.
         """
         self.ref, self.hyp, self.register = ref, hyp, register
 

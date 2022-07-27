@@ -16,35 +16,28 @@ Website](https://openfad.nist.gov).
 - python 3.6 or later
 - setuptools
 
-### Installing FAD Scorer
-
-> NOTE: Running install will also install dependent python packages.
-
 ```bash
 python -m pip install setuptools
+```
+
+### Installing FAD Scorer
+
+> NOTE: Running install will also install dependent python packages !
+
+```bash
 python -m pip install .
 ```
 
 After running the install above there should be a `fad-scorer` CLI tool in your
 python environment.
 
-### (Optional) Installing HDF5 Introspection Tools
-
-The scorer uses the [HDF5
-standard-format](https://www.hdfgroup.org/solutions/hdf5/) for storing results
-on file but extracts them to CSV by default so no extra tools are needed to
-inspect system- and activity-level scores.
-
-However, there are several CLI- and UI-based tools available if you wish to
-inspect the hdf5 files directly. For example `h5dump, h5ls`:
-
-- Ubunut/Debian platforms: `sudo apt-get install h5utils`
-- OsX: `brew install hdf5`
-
 ## Running Tests
 
 ```bash
+# Install dependencies
 python -m pip install .[tests]
+
+# Run unit/integration tests
 python -m pytest
 ```
 
@@ -69,6 +62,31 @@ fad-scorer score-tad -r tests/testdata/tad_ref_smoothcurve.csv -y tests/testdata
 # Plot Results
 fad-scorer plot-results -f tmp/scoring_results.h5
 ```
+
+## Generating Documentation (optional)
+
+Documentation uses the `pdoc` package.
+
+```bash
+# Install dependencies
+python -m pip install .[documentation]
+
+# generate docs and provide access via http server
+pdoc -d numpy ./fad21 -n
+```
+
+## Installing HDF5 Introspection Tools (optional)
+
+The scorer uses the [HDF5
+standard-format](https://www.hdfgroup.org/solutions/hdf5/) for storing results
+on file but extracts them to CSV by default so no extra tools are needed to
+inspect system- and activity-level scores.
+
+However, there are several CLI- and UI-based tools available if you wish to
+inspect the hdf5 files directly. For example `h5dump, h5ls`:
+
+- Ubunut/Debian platforms: `sudo apt-get install h5utils`
+- OsX: `brew install hdf5`
 
 # Authors
 

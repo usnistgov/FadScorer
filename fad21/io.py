@@ -20,7 +20,7 @@ def csv_has_no_header(file_name):
         return not line1.startswith('#')
 
 def sanitize_csv_header(file_name):    
-    """ Given file_name read and return content with filtered spaces and LF's
+    """ Given *file_name* read and return content with filtered spaces and LF's
     """
     with open(file_name) as f:        
         return [ l.strip() for l in f.readline()[1:].strip().split(',') ]
@@ -92,32 +92,32 @@ def _autoload_csv(fn, header, types = None):
             raise IOError("Header of '{}' is missing following fields: {}".format(fn, list(missing_set)))
 
 def load_ref(fn):
-    """ Given fn load AC reference and return as dataframe """    
+    """ Given *fn* load AC reference and return as dataframe """    
     return _autoload_csv(fn, ["video_file_id", "activity_id"], { 'video_file_id' : 'str', 'activity_id': 'str'})
 
 def load_tad_ref(fn):
-    """ Given fn load TAD reference and return as dataframe """
+    """ Given *fn* load TAD reference and return as dataframe """
     return _autoload_csv(fn, ["video_file_id", "activity_id", "frame_start", "frame_end"], 
     { 'video_file_id' : 'str', 'activity_id': 'str', 'frame_start': 'float', 'frame_end': 'float'} )
 
 def load_hyp(fn):    
-    """ Given fn load AC system-output and return as dataframe """
+    """ Given *fn* load AC system-output and return as dataframe """
     return _autoload_csv(fn, ["video_file_id", "activity_id", "confidence_score"], 
     { 'video_file_id' : 'str', 'activity_id': 'str', 'confidence_score': 'float'})
 
 def load_tad_hyp(fn):
-    """ Given fn load TAD system-output and return as dataframe """    
+    """ Given *fn* load TAD system-output and return as dataframe """    
     return _autoload_csv(fn, ["video_file_id", "activity_id", "confidence_score", "frame_start", "frame_end" ],
         { 'video_file_id' : 'str', 'activity_id': 'str', 'confidence_score': 'float', 
         'frame_start': 'float', 'frame_end': 'float'} )
 
 def load_index(fn):
-    """ Given fn load Video-index list and rturn as dataframe """    
+    """ Given *fn* load Video-index list and rturn as dataframe """    
     return _autoload_csv(fn, ["video_file_id", "frame_rate"],
         { 'video_file_id' : 'str', 'frame_rate': 'float' } )
 
 def load_mapping_file(fn):
-    """ Given fn load JSON formatted mapping file and return as json.object """    
+    """ Given *fn* load JSON formatted mapping file and return as json.object """    
     f = open(fn)
     return json.load(f)
 
@@ -166,7 +166,7 @@ def wipe_scoring_file(fn):
         os.remove(fn)
 
 def load_list_file(fn):
-    """ Given fn load list from file using '\n' as separator. Raises if file is
+    """ Given fn load list from file using '\\n' as separator. Raises if file is
     not found """
     if os.path.exists(fn):
         fh = open(fn, "r")
@@ -189,9 +189,9 @@ def h5_type_fetch(object, name, attr_val):
     attr_val: object
         attribute value
 
-    Output
-    ------
-    h5py.object:
+    Returns
+    -------
+    h5py.object
         Group either retrieved or new.
     """
     if name in object.keys():
@@ -414,9 +414,9 @@ def h5_extract_system_scores(h5f):
     h5f: H5 handle
         Opened archive handle.
 
-    Output
-    ------
-    1d-array:
+    Returns
+    -------
+    1d-array
         with tuples of metric and scores.
     """    
     dataArr = []
@@ -435,9 +435,9 @@ def h5_extract_system_iou_scores(h5f):
     h5f: H5 handle
         Opened archive handle.
 
-    Output
-    ------
-    1d-array:
+    Returns
+    -------
+    1d-array
         with tuples of metric and scores.
     """        
     dataArr = []
@@ -460,9 +460,9 @@ def h5_extract_activity_scores(h5f):
     h5f: H5 handle
         Opened archive handle.
 
-    Output
-    ------
-    1d-array:
+    Returns
+    -------
+    1d-array
         with tuples of activity, metric and scores.
     """    
     activitiesG = h5f['activity']
@@ -483,9 +483,9 @@ def h5_extract_activity_iou_scores(h5f):
     h5f: H5 handle
         Opened archive handle.
 
-    Output
-    ------
-    1d-array:
+    Returns
+    -------
+    1d-array
         with tuples of activity, metric and scores.
     """    
     activitiesG = h5f['activity']
@@ -507,8 +507,8 @@ def h5_extract_activity_iou_scores(h5f):
 def write_system_level_scores(output_file, results):
     """ Write system level scores to output file.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     output_file: str
         Full path of output file. Will overwrite content or create file on demand.
     results: 1darray of df
@@ -522,8 +522,8 @@ def write_system_level_scores(output_file, results):
 def write_activity_level_scores(output_file, al_results):
     """ Write activity level scores to output file.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     output_file: str
         Full path of output file. Will overwrite content or create file on demand.
     al_results: 1darray of df

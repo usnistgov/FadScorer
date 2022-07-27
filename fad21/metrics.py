@@ -43,8 +43,8 @@ def compute_multiclass_pr(ds):
     ----------
     ds: Dataset
         Dataset w/ reference and hypothesis dataframes set.
-        Ref: [video_id, activity_id]    
-        Hyp: [video_id, activity_id, confience_score]    
+        - Ref: [video_id, activity_id]    
+        - Hyp: [video_id, activity_id, confience_score]    
 
     Returns
     -------
@@ -166,6 +166,22 @@ def compute_average_precision_ac(ref, hyp):
     return ap_interp(prec, rec), prec, rec
 
 def compute_ious(row, ref):
+    """ Compute temporal intersection-over-union of single row by using all
+    reference segments.   
+    
+    Parameters
+    ----------
+    row : df
+        Hypothesis data-frame row w/ segment to match best tIoU.
+    ref : df
+        Reference data-frame w. same activity_id. Consists of ['video_file_id',
+        'activity_id']
+
+    Returns
+    -------
+    dataframe
+        Merged style dataframe with one row as a result matching highest IoU if found.
+    """
     refs = ref.loc[ ref['video_file_id'] == row.video_file_id ].copy()    
     # If there are no references for this hypothesis it's IoU is 0/FP
     if len(refs) == 0:

@@ -19,7 +19,6 @@ setup(
         'joblib'
     ],
     # use python -m pip install -e .[documentation]
-    # build docs w/ `pdoc -d numpy fad21`
     extras_require={'interactive': ['jupyter'],
                     'documentation': ['pdoc'],
                     'tests': ['pytest']},

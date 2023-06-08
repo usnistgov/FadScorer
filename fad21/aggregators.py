@@ -128,8 +128,8 @@ def pr_curve_aggregator(h5f, activities=[]):
         recl = activityG['prt/recall'][()][::-1]
         prec = activityG['prt/precision'][()][::-1]
         # [0,0] / empty arrays does not work well w/ interp algo.        
-        if not np.any(prec):
-            continue        
+        #if not np.any(prec):
+        #    continue        
         prec, recl, _ = ap_interp_pr(prec, recl)
         prec, recl = fix_pr_tail(prec, recl)        
         dlist.append(np.array([ recl, prec ]))    
